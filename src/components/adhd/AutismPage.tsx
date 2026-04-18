@@ -8,6 +8,7 @@
 import React, { useState, useEffect } from 'react';
 import PredictabilityEngine from './PredictabilityEngine';
 import InstructionClarifier from './InstructionClarifier';
+import StepExpectationCard from './StepExpectation';
 
 interface CourseSectionType {
   id: string;
@@ -35,7 +36,8 @@ interface AutismPageProps {
 
 const SAMPLE_NEURO_TRANSCRIPT = `Neurodiversity refers to the variation in the human brain regarding sociability, learning, attention, mood, and other mental functions. It is a concept where neurological differences are recognized and respected as any other human variation. Conditions like ADHD, Autism, Dyspraxia, and Dyslexia are natural variations. Embracing neurodiversity means understanding these differences.`;
 
-const INITIAL_SECTIONS: CourseSectionType[] = [
+// We inject the fetched Wikipedia content into this in the useEffect
+export const INITIAL_SECTIONS: CourseSectionType[] = [
   {
     id: 'video-neuro-overview',
     title: '📺 Video: Understanding Neurodiversity',
@@ -52,10 +54,73 @@ const INITIAL_SECTIONS: CourseSectionType[] = [
     type: 'article',
     sourceLink: 'https://en.wikipedia.org/wiki/Neurodiversity',
     sourceLinkLabel: 'Read full article on Wikipedia ↗',
-    content: '', // Fetched
+    content: '', // Fetched dynamically
     usePredictabilityEngine: true,
   }
 ];
+
+const WRITING_VIDEO: CourseSectionType = {
+  id: 'video-writing-essay',
+  title: '📺 Video: Structuring an Essay',
+  type: 'video',
+  embedUrl: 'https://www.youtube.com/embed/1vRzTzLdGFA',
+  sourceLink: 'https://www.youtube.com/watch?v=1vRzTzLdGFA',
+  sourceLinkLabel: 'Watch on YouTube ↗',
+  content: 'Learn how to construct a well-flowing essay, from thesis statement to an engaging conclusion.',
+  usePredictabilityEngine: true,
+};
+
+const WRITING_ARTICLE: CourseSectionType = {
+  id: 'article-writing-tips',
+  title: '📄 Article: Descriptive Language',
+  type: 'article',
+  sourceLink: 'https://en.wikipedia.org/wiki/Creative_writing',
+  sourceLinkLabel: 'Read about Creative Writing ↗',
+  content: 'Descriptive writing involves using sensory details and vivid vocabulary to paint a conceptual picture in the reader\'s mind. It moves beyond standard technical descriptions by engaging the emotions and senses.',
+  usePredictabilityEngine: false,
+};
+
+const MATH_VIDEO: CourseSectionType = {
+  id: 'video-math-logic',
+  title: '📺 Video: Intro to Logic',
+  type: 'video',
+  embedUrl: 'https://www.youtube.com/embed/kIf_mE01Bpw',
+  sourceLink: 'https://www.youtube.com/watch?v=kIf_mE01Bpw',
+  sourceLinkLabel: 'Watch on YouTube ↗',
+  content: 'An introduction to logic, truth tables, and fundamental proof structures in discrete mathematics.',
+  usePredictabilityEngine: true,
+};
+
+const MATH_SECTION: CourseSectionType = {
+  id: 'article-math-logic',
+  title: '📄 Article: Logical Proofs and Sets',
+  type: 'article',
+  sourceLink: 'https://en.wikipedia.org/wiki/Mathematical_logic',
+  sourceLinkLabel: 'Read about Mathematical Logic ↗',
+  content: 'Mathematical logic is the study of formal logic within mathematics. Major subareas include model theory, proof theory, set theory, and recursion theory. Research in mathematical logic commonly addresses the mathematical properties of formal systems of logic such as their expressive or deductive power.',
+  usePredictabilityEngine: false,
+};
+
+const SCIENCE_VIDEO: CourseSectionType = {
+  id: 'video-science-thermo',
+  title: '📺 Video: Laws of Thermodynamics',
+  type: 'video',
+  embedUrl: 'https://www.youtube.com/embed/8N1BxHgsoOw',
+  sourceLink: 'https://www.youtube.com/watch?v=8N1BxHgsoOw',
+  sourceLinkLabel: 'Watch on YouTube ↗',
+  content: 'Exploring the standard laws of thermodynamics and how entropy fundamentally drives the behavior of the universe.',
+  usePredictabilityEngine: true,
+};
+
+const SCIENCE_SECTION: CourseSectionType = {
+  id: 'article-science-thermo',
+  title: '📄 Article: Thermodynamics',
+  type: 'article',
+  sourceLink: 'https://en.wikipedia.org/wiki/Thermodynamics',
+  sourceLinkLabel: 'Read about Thermodynamics ↗',
+  content: 'Thermodynamics is a branch of physics that deals with heat, work, and temperature, and their relation to energy, entropy, and the physical properties of matter and radiation. The behavior of these quantities is governed by the four laws of thermodynamics.',
+  usePredictabilityEngine: false,
+};
 
 const LEARNING_COURSES: CourseType[] = [
   {
@@ -64,26 +129,43 @@ const LEARNING_COURSES: CourseType[] = [
     description: 'A comprehensive introduction to cognitive styles.',
     icon: '🧩',
     sections: INITIAL_SECTIONS,
-    assignments: []
+    assignments: [
+      "Leverage your creative instincts to synthesize a comprehensive overview of how neurodiversity impacts daily functioning, making sure to weave in personal reflections.",
+      "Ensure a cohesive flow in your presentation by outlining the historical context of neurodiversity without being rigidly tied to exact dates."
+    ]
   },
   {
     id: 'course-creative-writing',
     title: 'Creative Writing Workshop',
     description: 'Practice translating teacher instructions and breaking down writing assignments.',
     icon: '📝',
-    sections: [],
+    sections: [WRITING_VIDEO, WRITING_ARTICLE],
     assignments: [
-      "Write a short page about what you did over the summer and make it sound exciting.",
-      "Fix up your essay so it flows better and has a better conclusion.",
-      "Just be creative and do a presentation on an animal."
+      "Draft a compelling narrative discussing your summer experiences; feel free to elaborate extensively on any emotional journeys you undertook.",
+      "Refine the structural logic of your previous essay to ensure that the concluding paragraph dramatically impacts the reader's broader understanding."
     ]
   },
   {
-    id: 'course-sensory',
-    title: 'Sensory Processing Deep Dive',
-    description: 'Understanding sensory overload and practical regulation strategies.',
-    icon: '🎧',
-    sections: [] 
+    id: 'course-maths',
+    title: 'Mathematics: Discrete Logic',
+    description: 'Explore the foundations of logic, sets, and rigorous mathematical proofs.',
+    icon: '📐',
+    sections: [MATH_VIDEO, MATH_SECTION],
+    assignments: [
+      "Develop a fluid and intuitive explanation of how set theory naturally extends into abstract algebra, keeping your definitions broad.",
+      "Provide sufficient detail when explaining Gödel's incompleteness theorems such that a layperson can grasp the philosophical implications."
+    ]
+  },
+  {
+    id: 'course-science',
+    title: 'Science: Thermodynamics',
+    description: 'Focuses on the laws governing heat, energy, and entropy.',
+    icon: '🔬',
+    sections: [SCIENCE_VIDEO, SCIENCE_SECTION],
+    assignments: [
+      "Create an engaging visual representation of entropy's role in the universe, focusing more on the conceptual beauty rather than strict equations.",
+      "Write an exploratory paper debating the practical limitations of the second law of thermodynamics in a hypothetical closed system."
+    ]
   }
 ];
 
@@ -92,10 +174,36 @@ const AutismPage: React.FC<AutismPageProps> = ({ onBack }) => {
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<string>(INITIAL_SECTIONS[0].id);
   const [completedCourses, setCompletedCourses] = useState<Set<string>>(new Set());
+  const [wikiContent, setWikiContent] = useState<string>('');
+  
+  // Explicit Progress Tracking
+  const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
+  // Content Expectation Setting — tracks which steps have been previewed and confirmed
+  const [confirmedItems, setConfirmedItems] = useState<Set<string>>(new Set());
+
+  const confirmExpectation = (itemId: string) => {
+    setConfirmedItems(prev => new Set(prev).add(itemId));
+  };
 
   const handleLessonComplete = (courseId: string) => {
     setCompletedCourses(prev => new Set(prev).add(courseId));
   };
+  
+  const markItemComplete = (itemId: string) => {
+    setCompletedItems(prev => new Set(prev).add(itemId));
+  };
+
+  // Pre-calculate progress for the auto-complete hook
+  const activeCourse = LEARNING_COURSES.find(c => c.id === selectedCourseId) || LEARNING_COURSES[0];
+  const totalCourseItems = activeCourse.sections.length + (activeCourse.assignments?.length || 0);
+  const completedCount = activeCourse.sections.filter(s => completedItems.has(`${activeCourse.id}-${s.id}`)).length +
+      (activeCourse.assignments?.filter((_, i) => completedItems.has(`${activeCourse.id}-assignment-${i}`)).length || 0);
+
+  useEffect(() => {
+    if (selectedCourseId && totalCourseItems > 0 && completedCount === totalCourseItems) {
+       handleLessonComplete(selectedCourseId);
+    }
+  }, [completedCount, totalCourseItems, selectedCourseId]);
 
   useEffect(() => {
     const fetchArticle = async () => {
@@ -103,6 +211,7 @@ const AutismPage: React.FC<AutismPageProps> = ({ onBack }) => {
         const res = await fetch('https://en.wikipedia.org/api/rest_v1/page/summary/Neurodiversity');
         const data = await res.json();
         const articleText = data.extract || 'Could not load article content.';
+        setWikiContent(articleText);
 
         setSections(prev =>
           prev.map(s =>
@@ -130,50 +239,72 @@ const AutismPage: React.FC<AutismPageProps> = ({ onBack }) => {
         </header>
 
         <div style={styles.catalogGrid}>
-          {LEARNING_COURSES.map(course => (
-            <div 
-              key={course.id} 
-              style={styles.courseCardOverview} 
-              onClick={() => {
-                const hasSections = course.sections.length > 0;
-                const hasAssignments = course.assignments && course.assignments.length > 0;
+          {LEARNING_COURSES.map(course => {
+            const hasSections = course.sections.length > 0;
+            const hasAssignments = course.assignments && course.assignments.length > 0;
+            
+            const totalCourseItems = course.sections.length + (course.assignments?.length || 0);
+            const courseCompletedCount = course.sections.filter(s => completedItems.has(`${course.id}-${s.id}`)).length +
+                (course.assignments?.filter((_, i) => completedItems.has(`${course.id}-assignment-${i}`)).length || 0);
+            const progressPct = totalCourseItems > 0 ? Math.round((courseCompletedCount / totalCourseItems) * 100) : 0;
 
-                if (hasSections || hasAssignments) {
-                  setSelectedCourseId(course.id);
-                  if (hasSections) {
-                    const mergedSections = course.sections.map(sec => {
-                      const fetchedSec = sections.find(s => s.id === sec.id);
-                      return fetchedSec && fetchedSec.content ? { ...sec, content: fetchedSec.content } : sec;
-                    });
-                    setSections(mergedSections);
-                    setActiveSection(mergedSections[0].id);
+            return (
+              <div 
+                key={course.id} 
+                style={styles.courseCardOverview} 
+                onClick={() => {
+                  if (hasSections || hasAssignments) {
+                    setSelectedCourseId(course.id);
+                    if (hasSections) {
+                      const mergedSections = course.sections.map(sec => 
+                        sec.id === 'article-neuro-wiki' && wikiContent
+                          ? { ...sec, content: wikiContent }
+                          : sec
+                      );
+                      setSections(mergedSections);
+                      setActiveSection(mergedSections[0].id);
+                    }
+                  } else {
+                    alert('This course module is coming soon!');
                   }
-                } else {
-                  alert('This course module is coming soon!');
-                }
-              }}
-            >
-              <div style={styles.courseIcon}>{course.icon}</div>
-              <h2 style={styles.courseCardTitle}>{course.title}</h2>
-              <p style={styles.courseCardDesc}>{course.description}</p>
-              
-              {completedCourses.has(course.id) && (
-                <div style={styles.completedTag}>✓ Completed</div>
-              )}
+                }}
+              >
+                <div style={styles.courseIcon}>{course.icon}</div>
+                <h2 style={styles.courseCardTitle}>{course.title}</h2>
+                <p style={styles.courseCardDesc}>{course.description}</p>
+                
+                {/* EXPLICT PROGRESS UI FOR CARDS */}
+                {(hasSections || hasAssignments) && !completedCourses.has(course.id) && (
+                  <div style={{ width: '100%', marginTop: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#718096', marginBottom: '0.25rem', fontWeight: 600 }}>
+                      <span>Step {courseCompletedCount} of {totalCourseItems}</span>
+                      <span>{progressPct}%</span>
+                    </div>
+                    <div style={{ backgroundColor: '#e2e8f0', borderRadius: '1rem', height: '0.5rem', width: '100%', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${progressPct}%`, backgroundColor: '#4299e1', transition: 'width 0.3s ease' }} />
+                    </div>
+                  </div>
+                )}
 
-              {course.sections.length === 0 && (!course.assignments || course.assignments.length === 0) && (
-                <span style={styles.comingSoonBadge}>Coming Soon</span>
-              )}
-            </div>
-          ))}
+                {completedCourses.has(course.id) && (
+                  <div style={styles.completedTag}>✓ Completed ({totalCourseItems}/{totalCourseItems} Steps)</div>
+                )}
+
+                {course.sections.length === 0 && (!course.assignments || course.assignments.length === 0) && (
+                  <span style={styles.comingSoonBadge}>Coming Soon</span>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     );
   }
 
-  const activeCourse = LEARNING_COURSES.find(c => c.id === selectedCourseId) || LEARNING_COURSES[0];
   const hasSections = activeCourse.sections.length > 0;
   const hasAssignments = activeCourse.assignments && activeCourse.assignments.length > 0;
+
+  const progressPct = totalCourseItems > 0 ? Math.round((completedCount / totalCourseItems) * 100) : 0;
 
   return (
     <div style={styles.page}>
@@ -185,6 +316,14 @@ const AutismPage: React.FC<AutismPageProps> = ({ onBack }) => {
         <h1 style={styles.courseTitle}>{activeCourse.title}</h1>
         <p style={styles.courseSubtitle}>
           A structured learning experience.
+        </p>
+
+        {/* EXPLICIT PROGRESS MAPPING */}
+        <div style={{ marginTop: '1.5rem', backgroundColor: '#e2e8f0', borderRadius: '1rem', height: '1.25rem', overflow: 'hidden', width: '100%', maxWidth: '600px', margin: '1.5rem auto 0 auto' }}>
+           <div style={{ height: '100%', width: `${progressPct}%`, backgroundColor: '#38a169', transition: 'width 0.3s ease' }} />
+        </div>
+        <p style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#4a5568', fontWeight: 600 }}>
+          Course Progress: Step {completedCount} of {totalCourseItems} completed
         </p>
       </header>
 
@@ -207,38 +346,64 @@ const AutismPage: React.FC<AutismPageProps> = ({ onBack }) => {
 
           {sections.map(section => {
             if (section.id !== activeSection) return null;
+            const itemKey = `${activeCourse.id}-${section.id}`;
+            const isConfirmed = confirmedItems.has(itemKey);
 
             return (
               <div key={section.id} style={styles.sectionContainer}>
-                {section.usePredictabilityEngine ? (
-                  <PredictabilityEngine 
-                    sectionId={section.id}
+               
+                {/* CONTENT EXPECTATION CARD — shown first */}
+                {!isConfirmed && (
+                  <StepExpectationCard
+                    type="lesson"
                     title={section.title}
-                    type={section.type}
-                    content={section.content}
-                    embedUrl={section.embedUrl}
-                    sourceLink={section.sourceLink}
-                    sourceLinkLabel={section.sourceLinkLabel}
-                    onComplete={() => handleLessonComplete(activeCourse.id)}
-                    onBackToLibrary={() => setSelectedCourseId(null)}
+                    contentSnippet={section.content}
+                    onBegin={() => confirmExpectation(itemKey)}
                   />
-                ) : (
-                  <div style={styles.contentCard}>
-                    {section.type === 'video' && section.embedUrl ? (
-                      <div style={styles.videoWrapper}>
-                        <iframe
-                          src={section.embedUrl}
-                          title={section.title}
-                          style={styles.videoIframe}
-                          allowFullScreen
-                        />
+                )}
+
+                {/* ACTUAL LESSON CONTENT — shown after expectation confirmed */}
+                {isConfirmed && (
+                  section.usePredictabilityEngine ? (
+                    <PredictabilityEngine 
+                      sectionId={section.id}
+                      title={section.title}
+                      type={section.type}
+                      content={section.content}
+                      embedUrl={section.embedUrl}
+                      sourceLink={section.sourceLink}
+                      sourceLinkLabel={section.sourceLinkLabel}
+                      onComplete={() => markItemComplete(itemKey)}
+                      onBackToLibrary={() => setSelectedCourseId(null)}
+                    />
+                  ) : (
+                    <div style={styles.contentCard}>
+                      {section.type === 'video' && section.embedUrl ? (
+                        <div style={styles.videoWrapper}>
+                          <iframe
+                            src={section.embedUrl}
+                            title={section.title}
+                            style={styles.videoIframe}
+                            allowFullScreen
+                          />
+                        </div>
+                      ) : (
+                        <div style={styles.articleContent}>
+                          {section.content ? <p style={styles.articleText}>{section.content}</p> : <p>Loading...</p>}
+                        </div>
+                      )}
+                      
+                      <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end' }}>
+                         {!completedItems.has(itemKey) ? (
+                           <button style={styles.primaryButton} onClick={() => markItemComplete(itemKey)}>
+                             Mark Lesson Complete ✓
+                           </button>
+                         ) : (
+                           <span style={{ color: '#38a169', fontWeight: 'bold' }}>✓ Lesson Completed</span>
+                         )}
                       </div>
-                    ) : (
-                      <div style={styles.articleContent}>
-                        {section.content ? <p style={styles.articleText}>{section.content}</p> : <p>Loading...</p>}
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  )
                 )}
               </div>
             );
@@ -252,9 +417,41 @@ const AutismPage: React.FC<AutismPageProps> = ({ onBack }) => {
           <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', color: '#2d3748' }}>
             Course Assignments
           </h2>
-          {activeCourse.assignments!.map((instruction, idx) => (
-            <InstructionClarifier key={idx} rawInstruction={instruction} />
-          ))}
+          {activeCourse.assignments!.map((instruction, idx) => {
+            const itemKey = `${activeCourse.id}-assignment-${idx}`;
+            const isConfirmed = confirmedItems.has(itemKey);
+            const label = `Assignment ${idx + 1}`;
+
+            return (
+              <div key={idx} style={{ marginBottom: '1.5rem' }}>
+                {/* CONTENT EXPECTATION CARD — shown first */}
+                {!isConfirmed && (
+                  <StepExpectationCard
+                    type="assignment"
+                    title={label}
+                    contentSnippet={instruction}
+                    onBegin={() => confirmExpectation(itemKey)}
+                  />
+                )}
+
+                {/* ACTUAL ASSIGNMENT CONTENT — shown after expectation confirmed */}
+                {isConfirmed && (
+                  <div style={{ ...styles.contentCard, padding: '1.5rem' }}>
+                    <InstructionClarifier rawInstruction={instruction} />
+                    <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+                       {!completedItems.has(itemKey) ? (
+                         <button style={styles.primaryButton} onClick={() => markItemComplete(itemKey)}>
+                           Mark Assignment Complete ✓
+                         </button>
+                       ) : (
+                         <span style={{ color: '#38a169', fontWeight: 'bold' }}>✓ Assignment Completed</span>
+                       )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -345,6 +542,30 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     textTransform: 'uppercase'
   },
+  toggleContainer: {
+    marginTop: '1.5rem',
+    display: 'inline-block',
+    padding: '0.75rem 1.5rem',
+    backgroundColor: '#ebf8ff',
+    borderRadius: '2rem',
+    border: '1px solid #90cdf4',
+  },
+  toggleLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    cursor: 'pointer',
+    gap: '0.75rem',
+  },
+  toggleInput: {
+    width: '1.2rem',
+    height: '1.2rem',
+    cursor: 'pointer',
+  },
+  toggleText: {
+    fontWeight: 600,
+    color: '#2b6cb0',
+    fontSize: '0.95rem'
+  },
   backButton: {
     background: 'none',
     border: 'none',
@@ -411,6 +632,17 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '1.05rem',
     color: '#2d3748',
     margin: 0,
+  },
+  primaryButton: {
+    padding: '0.85rem 2rem',
+    backgroundColor: '#3182ce',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '0.5rem',
+    fontWeight: 'bold',
+    fontSize: '1rem',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s',
   }
 };
 
