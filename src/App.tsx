@@ -9,7 +9,7 @@
  *   
  *   After detection/login, the user is routed to ONE of these pages
  *   based on their stored 'disabilityProfile' in Firestore:
- *     /learning-disability  → For 'learning' profile
+ *     /dyslexia             → For 'learning' profile
  *     /physical-disability  → For 'physical' profile
  *     /visual-impairment    → For 'visual' profile
  *     /adhd-autism           → For 'adhd' or 'autism' profile
@@ -33,7 +33,7 @@ import Register from './components/Register';
 import HomePage from './components/HomePage';
 
 // Disability-specific pages (user doesn't know which one they are on)
-import LearningDisability from './components/pages/LearningDisability';
+import Dyslexia from './components/pages/Dyslexia';
 import PhysicalDisability from './components/pages/PhysicalDisability';
 import VisualImpairment from './components/pages/VisualImpairment';
 import AdhdPage from './components/adhd/AdhdPage';
@@ -57,7 +57,7 @@ function App() {
           <Route path="/home" element={<HomePage />} />
 
           {/* Disability-specific pages — routed automatically after login */}
-          <Route path="/learning-disability" element={<LearningDisability />} />
+          <Route path="/dyslexia" element={<Dyslexia />} />
           <Route path="/physical-disability" element={<PhysicalDisability />} />
           <Route path="/visual-impairment" element={<VisualImpairment />} />
           <Route path="/adhd" element={<AdhdPage onBack={() => window.location.href = '/home'} />} />

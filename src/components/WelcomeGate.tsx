@@ -17,6 +17,7 @@ const WelcomeGate: React.FC = () => {
   const voiceTimeoutRef = useRef<any>(null);
   const repeatTimeoutRef = useRef<any>(null);
   const attemptsRef = useRef<number>(1); // Track how many times we've asked
+  const navigatingRef = useRef(false);   // Guard: stop timers firing after navigation
 
   useEffect(() => {
     // Try to speak on load — browsers may block this, visual text is fallback
@@ -49,10 +50,12 @@ const WelcomeGate: React.FC = () => {
         }
       } else if (phase === 5) {
         if (e.code === 'Space') {
-          // SPACEBAR -> Login Page
+          navigatingRef.current = true;
+          cleanupTimersAndVoice();
           navigate('/login?audio=true');
         } else {
-          // ANY OTHER KEY -> Register Page
+          navigatingRef.current = true;
+          cleanupTimersAndVoice();
           navigate('/register?audio=true');
         }
       }
@@ -198,6 +201,7 @@ const WelcomeGate: React.FC = () => {
   // -----------------------------------------------------------------
   const handleNo = () => {
     // CASE A: User clicks/says NO -> Immediately navigate to LOGIN PAGE
+    navigatingRef.current = true;
     cleanupTimersAndVoice();
     navigate('/login');
   };
@@ -213,34 +217,41 @@ const WelcomeGate: React.FC = () => {
   const runState5Logic = () => {
     setPhase(5);
     cleanupTimersAndVoice();
+    if (navigatingRef.current) return;
     
-    // Text is rendered via state, Voice output is handled here
     const phrase = "Press spacebar for login, any other key for registration.";
     
     speak(phrase, () => {
-      // Allow speech recognition just in case they use voice, 
+      if (navigatingRef.current) return;
+
+      // Voice recognition for 'login' / 'register' in phase 5
       if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
         recognitionRef.current = recognition;
         recognition.onresult = (event: any) => {
+          if (navigatingRef.current) return;
           clearTimeout(repeatTimeoutRef.current);
           const result = event.results[0][0].transcript.toLowerCase();
           if (result.includes('login') || result.includes('log in')) {
-            navigate('/login?audio=true'); // SPACEBAR equivalent -> login
+            navigatingRef.current = true;
+            cleanupTimersAndVoice();
+            navigate('/login?audio=true');
           } else if (result.includes('register') || result.includes('create')) {
-            navigate('/register?audio=true'); // ANY OTHER equivalent -> registration
+            navigatingRef.current = true;
+            cleanupTimersAndVoice();
+            navigate('/register?audio=true');
           } else {
-            // Unclear voice in phase 5 - repeat State 5
-            runState5Logic(); 
+            // Unclear voice — repeat once
+            if (!navigatingRef.current) runState5Logic();
           }
         };
         try { recognition.start(); } catch (e) {}
       }
 
-      // Repeat loop for Phase 5 if NO input is detected after 5 seconds
+      // Only repeat after 8 seconds of genuine silence — and only if still on this page
       repeatTimeoutRef.current = setTimeout(() => {
-        runState5Logic();
-      }, 5000);
+        if (!navigatingRef.current) runState5Logic();
+      }, 8000);
     });
   };
 

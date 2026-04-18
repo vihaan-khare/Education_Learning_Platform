@@ -9,7 +9,7 @@
  *   - 'visual'   -> Visual Impairment
  *   - 'autism'    -> ADHD/Autism section
  *   - 'adhd'      -> ADHD/Autism section
- *   - 'learning'  -> Learning Disability section
+ *   - 'learning'  -> Dyslexia section
  *   - 'physical'  -> Physical Disability section (manual selection only)
  *   - 'none'/null -> Fallback to onboarding
  * 
@@ -24,7 +24,7 @@
 export function getRouteForProfile(profile: string | null | undefined): string {
   switch (profile) {
     case 'learning':
-      return '/learning-disability';
+      return '/dyslexia';
     case 'physical':
       return '/physical-disability';
     case 'visual':

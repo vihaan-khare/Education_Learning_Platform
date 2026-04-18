@@ -2,16 +2,16 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import GamePlayer from '../common/GamePlayer';
 
-const LearningDisability: React.FC = () => {
+const Dyslexia: React.FC = () => {
   const navigate = useNavigate();
 
   return (
     <GamePlayer 
       mode="dyslexia" 
-      title="Dyslexia & Literacy Lab" 
+      title="Dyslexia" 
       onBack={() => navigate('/home')} 
     />
   );
 };
 
-export default LearningDisability;
+export default Dyslexia;

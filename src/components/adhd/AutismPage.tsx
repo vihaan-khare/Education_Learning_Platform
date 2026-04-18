@@ -9,6 +9,8 @@ import React, { useState, useEffect } from 'react';
 import PredictabilityEngine from './PredictabilityEngine';
 import InstructionClarifier from './InstructionClarifier';
 import StepExpectationCard from './StepExpectation';
+import { useAdminCourses } from '../../hooks/useAdminCourses';
+import type { AdminCourse } from '../../hooks/useAdminCourses';
 
 interface CourseSectionType {
   id: string;
@@ -169,6 +171,27 @@ const LEARNING_COURSES: CourseType[] = [
   }
 ];
 
+/** Map an AdminCourse from Firestore to a CourseSectionType the existing UI understands. */
+function adminCourseToSection(item: AdminCourse): CourseSectionType {
+  const isVideo = item.contentType === 'video_url';
+  const isText  = item.contentType === 'text_content';
+
+  // Convert a bare YouTube watch URL → embed URL
+  const toEmbed = (url: string) =>
+    url.replace('watch?v=', 'embed/').replace('youtu.be/', 'www.youtube.com/embed/');
+
+  return {
+    id: `admin-${item.id}`,
+    title: isVideo ? `📺 ${item.title}` : isText ? `📄 ${item.title}` : `🔗 ${item.title}`,
+    type: isVideo ? 'video' : 'article',
+    embedUrl: isVideo ? toEmbed(item.url) : undefined,
+    sourceLink: item.url || '#',
+    sourceLinkLabel: isVideo ? 'Watch on YouTube ↗' : 'Open resource ↗',
+    content: item.description || '',
+    usePredictabilityEngine: isVideo || isText,
+  };
+}
+
 const AutismPage: React.FC<AutismPageProps> = ({ onBack }) => {
   const [sections, setSections] = useState<CourseSectionType[]>(INITIAL_SECTIONS);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
@@ -183,6 +206,24 @@ const AutismPage: React.FC<AutismPageProps> = ({ onBack }) => {
   // Focus Mode — reduces visual distractions
   const [isFocusMode, setIsFocusMode] = useState(false);
 
+  // ── Admin-uploaded content from Firestore ────────────────────────────────
+  const { courses: adminItems, loading: adminLoading } = useAdminCourses('autism');
+
+  /** Merge static hardcoded courses + one dynamic card per admin upload. */
+  const allCourses: CourseType[] = [
+    ...LEARNING_COURSES,
+    ...adminItems.map((item): CourseType => ({
+      id: `admin-course-${item.id}`,
+      title: item.title,
+      description: item.description,
+      icon: item.contentType === 'video_url' ? '🎬'
+          : item.contentType === 'text_content' ? '📝'
+          : item.contentType === 'game_url' ? '🎮' : '🔗',
+      sections: [adminCourseToSection(item)],
+      assignments: item.assignments,
+    })),
+  ];
+
   const confirmExpectation = (itemId: string) => {
     setConfirmedItems(prev => new Set(prev).add(itemId));
   };
@@ -196,7 +237,7 @@ const AutismPage: React.FC<AutismPageProps> = ({ onBack }) => {
   };
 
   // Pre-calculate progress for the auto-complete hook
-  const activeCourse = LEARNING_COURSES.find(c => c.id === selectedCourseId) || LEARNING_COURSES[0];
+  const activeCourse = allCourses.find(c => c.id === selectedCourseId) || allCourses[0];
   const totalCourseItems = activeCourse.sections.length + (activeCourse.assignments?.length || 0);
   const completedCount = activeCourse.sections.filter(s => completedItems.has(`${activeCourse.id}-${s.id}`)).length +
       (activeCourse.assignments?.filter((_, i) => completedItems.has(`${activeCourse.id}-assignment-${i}`)).length || 0);
@@ -248,8 +289,14 @@ const AutismPage: React.FC<AutismPageProps> = ({ onBack }) => {
           </button>
         </header>
 
+        {adminLoading && (
+          <div style={{ textAlign: 'center', padding: '1rem', color: '#718096', fontSize: '0.875rem' }}>
+            ⏳ Loading additional content…
+          </div>
+        )}
+
         <div style={styles.catalogGrid}>
-          {LEARNING_COURSES.map(course => {
+          {allCourses.map(course => {
             const hasSections = course.sections.length > 0;
             const hasAssignments = course.assignments && course.assignments.length > 0;
             
@@ -257,11 +304,15 @@ const AutismPage: React.FC<AutismPageProps> = ({ onBack }) => {
             const courseCompletedCount = course.sections.filter(s => completedItems.has(`${course.id}-${s.id}`)).length +
                 (course.assignments?.filter((_, i) => completedItems.has(`${course.id}-assignment-${i}`)).length || 0);
             const progressPct = totalCourseItems > 0 ? Math.round((courseCompletedCount / totalCourseItems) * 100) : 0;
+            const isAdminItem = course.id.startsWith('admin-course-');
 
             return (
               <div 
                 key={course.id} 
-                style={styles.courseCardOverview} 
+                style={{
+                  ...styles.courseCardOverview,
+                  ...(isAdminItem ? { borderColor: '#4f46e5', borderWidth: 2 } : {})
+                }}
                 onClick={() => {
                   if (hasSections || hasAssignments) {
                     setSelectedCourseId(course.id);
@@ -279,6 +330,14 @@ const AutismPage: React.FC<AutismPageProps> = ({ onBack }) => {
                   }
                 }}
               >
+                {isAdminItem && (
+                  <span style={{
+                    position: 'absolute', top: '0.75rem', left: '0.75rem',
+                    backgroundColor: '#4f46e5', color: '#fff',
+                    fontSize: '0.65rem', fontWeight: 700, padding: '0.15rem 0.5rem',
+                    borderRadius: '2rem', letterSpacing: '0.05em', textTransform: 'uppercase'
+                  }}>Admin</span>
+                )}
                 <div style={styles.courseIcon}>{course.icon}</div>
                 <h2 style={styles.courseCardTitle}>{course.title}</h2>
                 <p style={styles.courseCardDesc}>{course.description}</p>

@@ -24,21 +24,29 @@ const HomePage: React.FC = () => {
   const [dbError, setDbError] = useState<string | null>(null);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        await updateLastActive();
-        await logActivity('dashboard', 'Student Portal', 'Home', 'page_visit');
-        const data = await getUserStats();
-        if (!data) {
-          setDbError("Firestore Database is not enabled or accessible. Please check your Firebase console rules.");
-        }
-        setStats(data);
-      } catch (e: any) {
-        setDbError(e.message || "Failed to connect to Firebase.");
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        const load = async () => {
+          try {
+            await updateLastActive();
+            await logActivity('dashboard', 'Student Portal', 'Home', 'page_visit');
+            const data = await getUserStats();
+            if (!data) {
+              setDbError("Firestore connectivity issue. Ensure your rules allow read/write and the service is enabled.");
+            }
+            setStats(data);
+          } catch (e: any) {
+            setDbError(e.message || "Failed to connect to Firebase.");
+          }
+          setLoading(false);
+        };
+        load();
+      } else {
+        setLoading(false);
       }
-      setLoading(false);
-    };
-    load();
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const handleLogout = async () => {
@@ -51,7 +59,7 @@ const HomePage: React.FC = () => {
     const map: Record<string, string> = {
       autism: 'Autism Spectrum',
       adhd: 'ADHD',
-      learning: 'Dyslexia & Literacy',
+      learning: 'Dyslexia',
       visual: 'Visual Impairment',
       physical: 'Physical Accessibility',
     };
@@ -99,11 +107,7 @@ const HomePage: React.FC = () => {
 
       {dbError && (
         <div style={{ backgroundColor: '#fed7d7', color: '#c53030', padding: '1rem', borderRadius: '0.5rem', marginBottom: '2rem', border: '1px solid #f56565' }}>
-          <strong>Database Connection Error:</strong> {dbError}
-          <div style={{ marginTop: '0.5rem', fontSize: '0.9rem' }}>
-            To fix this: Go to console.firebase.google.com &gt; Firestore Database &gt; Rules, and set:<br/>
-            <code>allow read, write: if request.auth != null;</code>
-          </div>
+          <strong>Database Error:</strong> {dbError}
         </div>
       )}
 

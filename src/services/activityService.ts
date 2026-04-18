@@ -106,9 +106,9 @@ export async function getUserStats(): Promise<UserStats | null> {
       totalActivities: recent.length,
       recentActivity: recent,
     };
-  } catch (err) {
+  } catch (err: any) {
     console.error('[ActivityService] Failed to fetch stats:', err);
-    return null;
+    throw new Error(err.message || 'Failed to fetch user database profile. Please check Firestore Rules.');
   }
 }
 

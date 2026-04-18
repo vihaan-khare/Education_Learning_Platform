@@ -13,6 +13,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { signOut } from 'firebase/auth';
 import { auth, db } from '../../firebase';
 import { doc, getDoc, collection, addDoc } from 'firebase/firestore';
 import {
@@ -21,6 +22,7 @@ import {
   type AdminUser,
   type GlobalActivityEntry,
 } from '../../services/activityService';
+import { visualWords, adhdWords, autismWords, physicalWords, learningWords } from '../../utils/symptoms';
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
@@ -28,7 +30,7 @@ type Profile = 'visual' | 'learning' | 'adhd' | 'autism' | 'physical';
 type Section = 'overview' | 'users' | 'activity' | 'upload';
 
 const PROFILE_LABEL: Record<string, string> = {
-  adhd: 'ADHD', autism: 'Autism', learning: 'Dyslexia & Literacy',
+  adhd: 'ADHD', autism: 'Autism', learning: 'Dyslexia',
   visual: 'Visual Impairment', physical: 'Physical', unset: 'Unassigned',
 };
 const PROFILE_COLOR: Record<string, string> = {
@@ -46,21 +48,11 @@ async function classifyCourse(title: string, desc: string): Promise<{ profile: P
   const hit = (words: string[]) => words.filter(w => txt.includes(w)).length;
 
   const scores: Record<Profile, number> = {
-    visual: hit(['blind','visual','vision','eye','sight','screen reader','low vision','visually impaired',
-      'braille','magnifier','zoom','contrast','color blind','high contrast','tts','text to speech',
-      'voiceover','nvda','narrator','retina','glaucoma','cataract','macular']),
-    adhd: hit(['adhd','add','attention','concentrate','hyperactiv','impulsiv','focus','fidget',
-      'restless','forgetful','procrastinat','time management','easily bored','stimulation',
-      'scattered','executive function','working memory','daydream','hyperfocus','dopamine','reward']),
-    autism: hit(['autism','autistic','asd','asperger','spectrum','sensory','overstimulat','stimming',
-      'meltdown','shutdown','loud noise','crowded','bright light','fluorescent','routine','schedule',
-      'predictab','transition','unexpected','eye contact','special interest','repetitive','calm','soothing']),
-    physical: hit(['physical','motor','wheelchair','mobility','cerebral palsy','muscular dystrophy',
-      'spinal cord','amputee','fine motor','gross motor','coordination','tremor','spasm','dexterity',
-      'grip','assistive device','switch control','eye tracking','voice control','quadripleg','adaptive']),
-    learning: hit(['dyslexia','dyslexic','reading','spelling','writing','letter','phonics','phonetic',
-      'decode','fluency','literacy','dyscalculia','math','dysgraphia','learning disability',
-      'slow reader','processing disorder','auditory processing','short term memory','iep']),
+    visual: hit(visualWords),
+    adhd: hit(adhdWords),
+    autism: hit(autismWords),
+    physical: hit(physicalWords),
+    learning: hit(learningWords),
   };
 
   const best = (Object.entries(scores) as [Profile, number][]).sort((a, b) => b[1] - a[1])[0];
@@ -102,7 +94,7 @@ Reply with ONLY valid JSON (no markdown):
       }
     } catch { /* fall through */ }
   }
-  return { profile: 'learning', reason: 'No clear match — defaulted to Learning Disability.' };
+  return { profile: 'learning', reason: 'No clear match — defaulted to Dyslexia.' };
 }
 
 // ─── component ───────────────────────────────────────────────────────────────
@@ -118,41 +110,74 @@ const AdminDashboard: React.FC = () => {
   const [search, setSearch] = useState('');
 
   // upload form
-  const [form, setForm] = useState({ title:'', description:'', url:'', contentType:'game_url' });
+  const [form, setForm] = useState<{
+    title: string; description: string; url: string; 
+    contentType: 'game_url' | 'video_url' | 'text_content' | 'external_link'; 
+    targetProfile: string; assignments: string[];
+  }>({ title:'', description:'', url:'', contentType:'game_url', targetProfile: 'auto', assignments: [] });
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<null|'success'|'error'>(null);
   const [uploadMsg, setUploadMsg] = useState('');
   const [classifiedProfile, setClassifiedProfile] = useState<Profile|null>(null);
   const uploadRef = useRef<HTMLDivElement>(null);
 
+  const handleLogout = async () => {
+    await signOut(auth);
+    navigate('/login');
+  };
+
   // ─── auth check ──────────────────────────────────────────────────────────
   useEffect(() => {
-    (async () => {
-      const user = auth.currentUser;
-      if (!user) { setAuthorized(false); setLoading(false); return; }
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (!user) {
+        setAuthorized(false);
+        setLoading(false);
+        return;
+      }
       try {
         const snap = await getDoc(doc(db, 'users', user.uid));
         if (!snap.exists() || snap.data()?.role !== 'admin') {
-          setAuthorized(false); setLoading(false); return;
+          setAuthorized(false);
+          setLoading(false);
+          return;
         }
       } catch (e: any) {
         setDbErr(e?.message ?? 'Firestore unreachable');
-        setAuthorized(false); setLoading(false); return;
+        setAuthorized(false);
+        setLoading(false);
+        return;
       }
       setAuthorized(true);
       try {
         const [u, a] = await Promise.all([getAllUsers(), getGlobalActivity()]);
-        setUsers(u); setActivity(a);
-      } catch (e: any) { setDbErr(e?.message); }
+        setUsers(u);
+        setActivity(a);
+      } catch (e: any) {
+        setDbErr(e?.message);
+      }
       setLoading(false);
-    })();
+    });
+
+    return () => unsubscribe();
   }, []);
 
   // ─── upload handler ──────────────────────────────────────────────────────
   const handleUpload = async () => {
     if (!form.title.trim() || !form.description.trim()) return;
     setUploading(true); setUploadStatus(null);
-    const { profile, reason } = await classifyCourse(form.title, form.description);
+    
+    let profile: Profile;
+    let reason: string;
+    
+    if (form.targetProfile === 'auto') {
+      const classification = await classifyCourse(form.title, form.description);
+      profile = classification.profile;
+      reason = classification.reason;
+    } else {
+      profile = form.targetProfile as Profile;
+      reason = 'Manually categorized by Admin';
+    }
+    
     setClassifiedProfile(profile);
     try {
       await addDoc(collection(db, 'courses', profile, 'items'), {
@@ -161,10 +186,11 @@ const AdminDashboard: React.FC = () => {
         profile, uploadedAt: Date.now(),
         uploadedBy: auth.currentUser?.email ?? 'admin',
         classifiedReason: reason,
+        assignments: form.assignments.filter(a => a.trim() !== ''),
       });
       setUploadStatus('success');
       setUploadMsg(`Saved to "${PROFILE_LABEL[profile]}" — ${reason}`);
-      setForm({ title:'', description:'', url:'', contentType:'game_url' });
+      setForm({ title:'', description:'', url:'', contentType:'game_url', targetProfile: 'auto', assignments: [] });
     } catch (e: any) {
       setUploadStatus('error');
       setUploadMsg(e?.message ?? 'Upload failed. Check Firestore rules.');
@@ -211,7 +237,7 @@ const AdminDashboard: React.FC = () => {
           ? <>Firestore error: <code style={C.code}>{dbErr}</code>. Fix rules in Firebase Console.</>
           : <>Set <code style={C.code}>role: "admin"</code> on your Firestore user document.</>}
       </p>
-      <button style={C.ghostBtn} onClick={() => navigate('/home')}>← Back to Home</button>
+      <button style={C.ghostBtn} onClick={handleLogout}>Sign Out</button>
     </div>
   );
 
@@ -241,9 +267,9 @@ const AdminDashboard: React.FC = () => {
           ))}
         </nav>
 
-        <button style={{...C.ghostBtn, marginTop:'auto', width:'100%'}}
-          onClick={() => navigate('/home')}>
-          ← Home
+        <button style={{...C.ghostBtn, marginTop:'auto', width:'100%', borderColor: '#ef4444', color: '#f87171'}}
+          onClick={handleLogout}>
+          Sign Out
         </button>
       </aside>
 
@@ -394,7 +420,7 @@ const AdminDashboard: React.FC = () => {
         {/* ── UPLOAD ── */}
         {section === 'upload' && (
           <div>
-            <PageHeader title="Upload Content" subtitle="AI automatically categorizes into the right disability profile" />
+            <PageHeader title="Upload Content" subtitle="Categorize content automatically via AI, or assign it manually" />
 
             <div style={{display:'grid',gridTemplateColumns:'1fr 320px',gap:'1.5rem',alignItems:'start'}}>
 
@@ -421,6 +447,19 @@ const AdminDashboard: React.FC = () => {
                       style={C.input}/>
                   </Field>
 
+                  <Field label="Target Profile" hint="Force this content into a specific profile, or let the AI decide">
+                    <select value={form.targetProfile}
+                      onChange={e=>setForm({...form,targetProfile:e.target.value})}
+                      style={C.input}>
+                      <option value="auto">✨ Auto-categorize (Gemini AI)</option>
+                      <option value="learning">Dyslexia</option>
+                      <option value="autism">Autism Spectrum</option>
+                      <option value="adhd">ADHD</option>
+                      <option value="visual">Visual Impairment</option>
+                      <option value="physical">Physical Accessibility</option>
+                    </select>
+                  </Field>
+
                   <Field label="Content Type" hint="How should this content be displayed to students?">
                     <select value={form.contentType}
                       onChange={e=>setForm({...form,contentType:e.target.value as any})}
@@ -432,6 +471,38 @@ const AdminDashboard: React.FC = () => {
                     </select>
                   </Field>
 
+                  <Field label="Assignments (Optional)" hint="Add assignment tasks for this section">
+                    {form.assignments.map((assignment, index) => (
+                      <div key={index} style={{display: 'flex', gap: '0.5rem', marginBottom: '0.5rem'}}>
+                        <input 
+                          value={assignment} 
+                          onChange={e => {
+                            const newAssignments = [...form.assignments];
+                            newAssignments[index] = e.target.value;
+                            setForm({...form, assignments: newAssignments});
+                          }}
+                          placeholder={`Assignment ${index + 1}`}
+                          style={C.input}
+                        />
+                        <button 
+                          onClick={() => {
+                            const newAssignments = form.assignments.filter((_, i) => i !== index);
+                            setForm({...form, assignments: newAssignments});
+                          }}
+                          style={{...C.ghostBtn, padding: '0.5rem', border: 'none'}}
+                        >
+                          ❌
+                        </button>
+                      </div>
+                    ))}
+                    <button 
+                      onClick={() => setForm({...form, assignments: [...form.assignments, '']})}
+                      style={{...C.ghostBtn, marginTop: '0.5rem', width: '100%'}}
+                    >
+                      + Add Assignment
+                    </button>
+                  </Field>
+
                   <button style={{
                     ...C.primaryBtn,
                     opacity: uploading||!form.title.trim()||!form.description.trim() ? 0.5 : 1,
@@ -439,7 +510,7 @@ const AdminDashboard: React.FC = () => {
                   }}
                     disabled={uploading||!form.title.trim()||!form.description.trim()}
                     onClick={handleUpload}>
-                    {uploading ? '⏳ Classifying & Saving…' : '✨ Upload & Auto-Categorize'}
+                    {uploading ? '⏳ Classifying & Saving…' : form.targetProfile === 'auto' ? '✨ Upload & Auto-Categorize' : '📤 Upload Content'}
                   </button>
 
                   {/* Result */}
