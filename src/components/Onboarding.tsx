@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAccessibility } from '../context/AccessibilityContext';
+import { auth, db } from '../firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 
 // TensorFlow.js Imports
 import * as tf from '@tensorflow/tfjs-core';
@@ -275,11 +277,11 @@ const Onboarding: React.FC = () => {
        responseMsg = "Excellent! Applying the recommended profile. Stand by...";
     }
 
-    setTimeout(() => {
+    setTimeout(async () => {
       setIsTyping(false);
       addAiMessage(responseMsg);
       
-      setTimeout(() => {
+      setTimeout(async () => {
         // Stop camera
         isAnalyzing.current = false;
         if (videoRef.current && videoRef.current.srcObject) {
@@ -287,6 +289,18 @@ const Onboarding: React.FC = () => {
           stream.getTracks().forEach(track => track.stop());
         }
         applyProfileSettings(profileToApply);
+
+        // Save to Firestore if user is logged in
+        if (auth.currentUser) {
+          try {
+            await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+              disabilityProfile: profileToApply
+            });
+          } catch (error) {
+            console.error("Failed to save profile to Firestore", error);
+          }
+        }
+
         navigate('/dashboard');
       }, 5000); // Wait for the TTS
     }, 1500);

@@ -1,73 +1,62 @@
-# React + TypeScript + Vite
+# Education Learning Platform
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This project is a React application utilizing Vite, TensorFlow.js (for facial landmark detection), and Firebase for authentication and database management. 
 
-Currently, two official plugins are available:
+## Setting Up the Project
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### Prerequisites
+- Node.js (v16+ recommended)
+- A Firebase account
 
-## React Compiler
+### Installation
+1. Clone the repository and navigate to the project directory:
+   ```bash
+   cd Education_Learning_Platform
+   ```
+2. Install the necessary dependencies:
+   ```bash
+   npm install
+   ```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Connecting to Firebase
+This application uses Firebase for Authentication and Firestore (Database).
 
-## Expanding the ESLint configuration
+#### 1. Create a Firebase Project
+1. Go to the [Firebase Console](https://console.firebase.google.com/).
+2. Click "Add project" and follow the onscreen instructions.
+3. Once the project is created, navigate to **Build > Authentication**, click "Get Started", and enable the **Email/Password** sign-in method.
+4. Navigate to **Build > Firestore Database**, click "Create database", select "Start in Test mode" (for development purposes) and choose a location.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+#### 2. Get Firebase Configuration
+1. In the Firebase Console, go to **Project Overview** and click the Web icon (`</>`) to add a Firebase app to your project.
+2. Register the app with a nickname.
+3. Firebase will provide a configuration object that looks like this:
+   ```javascript
+   const firebaseConfig = {
+     apiKey: "YOUR_API_KEY",
+     authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+     projectId: "YOUR_PROJECT_ID",
+     storageBucket: "YOUR_PROJECT_ID.appspot.com",
+     messagingSenderId: "YOUR_SENDER_ID",
+     appId: "YOUR_APP_ID"
+   };
+   ```
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+#### 3. Update Environment Variables
+1. Ensure there is a `.env` file at the root of your project directory. (You can copy `.env.example` to `.env`).
+2. Add your Firebase configuration keys that you obtained in the step above:
+   ```env
+   VITE_FIREBASE_API_KEY="YOUR_API_KEY"
+   VITE_FIREBASE_AUTH_DOMAIN="YOUR_PROJECT_ID.firebaseapp.com"
+   VITE_FIREBASE_PROJECT_ID="YOUR_PROJECT_ID"
+   VITE_FIREBASE_STORAGE_BUCKET="YOUR_PROJECT_ID.appspot.com"
+   VITE_FIREBASE_MESSAGING_SENDER_ID="YOUR_SENDER_ID"
+   VITE_FIREBASE_APP_ID="YOUR_APP_ID"
+   ```
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Running the Project Locally
+Once dependencies are installed and Firebase is configured:
+```bash
+npm run dev
 ```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+Open your browser and navigate to `http://localhost:5173`.
