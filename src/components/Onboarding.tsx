@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAccessibility } from '../context/AccessibilityContext';
 import { auth, db } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
+import { getRouteForProfile } from '../utils/profileRoutes';
 
 // TensorFlow.js Imports
 import * as tf from '@tensorflow/tfjs-core';
@@ -184,7 +185,7 @@ const Onboarding: React.FC = () => {
     }
   };
 
-  const processMLResults = () => {
+  function processMLResults() {
     let finalProfile: 'visual' | 'adhd' | 'autism' | 'learning' = 'learning';
     let analysisText = "";
 
@@ -301,7 +302,8 @@ const Onboarding: React.FC = () => {
           }
         }
 
-        navigate('/dashboard');
+        const nextRoute = getRouteForProfile(profileToApply);
+        navigate(nextRoute);
       }, 5000); // Wait for the TTS
     }, 1500);
   };
@@ -472,7 +474,7 @@ const Onboarding: React.FC = () => {
               stream.getTracks().forEach(track => track.stop());
             }
             applyProfileSettings('none'); 
-            navigate('/dashboard'); 
+            navigate(getRouteForProfile('none')); 
           }}
           title="Skip AI Onboarding"
         >
