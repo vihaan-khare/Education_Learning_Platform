@@ -9,6 +9,7 @@ This project is a React application utilizing Vite, TensorFlow.js (for facial la
 - A Firebase account
 
 ### Installation
+
 1. Clone the repository and navigate to the project directory:
    ```bash
    cd Education_Learning_Platform
