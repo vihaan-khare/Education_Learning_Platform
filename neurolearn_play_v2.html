@@ -1,0 +1,956 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NeuroLearn Play</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #6C63FF;
+    --primary-light: #EAE9FF;
+    --secondary: #FF6B9D;
+    --accent: #FFD93D;
+    --green: #2ECC71;
+    --orange: #FF922B;
+    --teal: #20C997;
+    --red: #E74C3C;
+    --bg: #F8F6FF;
+    --card: #FFFFFF;
+    --text: #1A1A2E;
+    --text-muted: #6B6B80;
+    --border: rgba(108,99,255,0.18);
+    --shadow: 0 4px 20px rgba(108,99,255,0.14);
+    --radius: 20px;
+    --font-size-base: 18px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Nunito', sans-serif; font-size: var(--font-size-base); background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+  .screen { display: none; min-height: 100vh; flex-direction: column; }
+  .screen.active { display: flex; }
+
+  .topbar { background: var(--card); border-bottom: 2px solid var(--border); padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .topbar-brand { font-size: 22px; font-weight: 900; color: var(--primary); }
+  .topbar-stats { display: flex; gap: 12px; align-items: center; }
+  .stat-chip { background: var(--primary-light); border-radius: 50px; padding: 6px 14px; font-size: 15px; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 6px; }
+  .topbar-actions { display: flex; gap: 8px; }
+  .icon-btn { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--border); background: var(--card); cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+  .icon-btn:hover { background: var(--primary-light); border-color: var(--primary); }
+
+  /* HOME */
+  .home-hero { background: linear-gradient(135deg, #6C63FF 0%, #FF6B9D 100%); padding: 36px 24px 44px; text-align: center; color: white; position: relative; overflow: hidden; }
+  .home-hero::before { content: ''; position: absolute; top: -30px; right: -30px; width: 150px; height: 150px; background: rgba(255,255,255,0.08); border-radius: 50%; }
+  .hero-mascot { font-size: 60px; margin-bottom: 10px; animation: bounce 2s infinite; }
+  @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+  .hero-title { font-size: 28px; font-weight: 900; margin-bottom: 4px; }
+  .hero-sub { font-size: 16px; opacity: 0.9; font-weight: 600; }
+  .player-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.25); border-radius: 50px; padding: 8px 18px; margin-top: 14px; font-weight: 700; font-size: 16px; }
+
+  .home-content { padding: 20px; flex: 1; }
+  .section-title { font-size: 19px; font-weight: 900; color: var(--text); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+
+  /* LEVELS GRID */
+  .levels-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+
+  /* Special Learn-to-Write card spans full width */
+  .level-card-write { grid-column: 1 / -1; }
+
+  .level-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 18px 14px;
+    border: 2.5px solid var(--border);
+    cursor: pointer;
+    transition: all 0.25s;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .level-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+  .level-card .level-icon { font-size: 38px; margin-bottom: 6px; }
+  .level-card .level-name { font-size: 15px; font-weight: 900; color: var(--text); }
+  .level-card .level-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; font-weight: 600; }
+  .level-stars { margin-top: 6px; font-size: 16px; }
+  .level-progress { height: 6px; background: #EEE; border-radius: 6px; margin-top: 8px; overflow: hidden; }
+  .level-progress-fill { height: 100%; border-radius: 6px; transition: width 0.5s; }
+
+  /* Write card special style */
+  .write-card {
+    background: linear-gradient(135deg, #1A1A2E 0%, #16213E 100%);
+    border: 3px solid #6C63FF;
+    border-radius: var(--radius);
+    padding: 20px 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    transition: all 0.25s;
+    position: relative;
+    overflow: hidden;
+  }
+  .write-card::before { content: ''; position: absolute; right: -30px; top: -30px; width: 120px; height: 120px; background: rgba(108,99,255,0.15); border-radius: 50%; }
+  .write-card:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(108,99,255,0.4); }
+  .write-card-icon {
+    width: 72px; height: 72px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #6C63FF, #FF6B9D);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .write-card-icon::after {
+    content: '✨';
+    position: absolute;
+    bottom: -6px; right: -6px;
+    font-size: 18px;
+  }
+  .write-card-text { flex: 1; }
+  .write-card-title { font-size: 18px; font-weight: 900; color: #FFFFFF; margin-bottom: 4px; }
+  .write-card-sub { font-size: 13px; color: rgba(255,255,255,0.7); font-weight: 600; line-height: 1.4; }
+  .write-card-badge {
+    background: linear-gradient(135deg, #FFD93D, #FF922B);
+    color: #1A1A2E;
+    font-size: 12px; font-weight: 900;
+    padding: 5px 12px;
+    border-radius: 50px;
+    margin-top: 8px;
+    display: inline-block;
+  }
+  .write-card-arrow { font-size: 24px; color: rgba(255,255,255,0.6); }
+
+  .lvl-1 { border-color: #6C63FF; } .lvl-1 .level-progress-fill { background: #6C63FF; }
+  .lvl-2 { border-color: #FF922B; } .lvl-2 .level-progress-fill { background: #FF922B; }
+  .lvl-3 { border-color: #FF6B9D; } .lvl-3 .level-progress-fill { background: #FF6B9D; }
+  .lvl-4 { border-color: #20C997; } .lvl-4 .level-progress-fill { background: #20C997; }
+  .lvl-5 { border-color: #F4A261; } .lvl-5 .level-progress-fill { background: #F4A261; }
+
+  /* MCQ OPTIONS — fully distinct colors */
+  .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .option-btn {
+    border: 3px solid transparent;
+    border-radius: 16px;
+    padding: 18px 10px;
+    font-size: 20px; font-weight: 900;
+    cursor: pointer;
+    transition: all 0.18s;
+    text-align: center;
+    font-family: 'Nunito', sans-serif;
+    position: relative;
+    overflow: hidden;
+  }
+  .option-btn::before { content: attr(data-label); position: absolute; top: 6px; left: 10px; font-size: 11px; font-weight: 900; opacity: 0.7; }
+  .option-btn:hover:not(:disabled) { transform: scale(1.04); }
+  .option-btn:disabled { cursor: default; }
+
+  /* 4 distinct option colors */
+  .opt-a { background: #EDE9FF; border-color: #6C63FF; color: #3B33AA; }
+  .opt-b { background: #FFF3E0; border-color: #FF922B; color: #B55A00; }
+  .opt-c { background: #E8FFF2; border-color: #2ECC71; color: #1A7A3A; }
+  .opt-d { background: #FFE8F4; border-color: #FF6B9D; color: #A0205E; }
+  .opt-a:hover:not(:disabled) { background: #D6D0FF; }
+  .opt-b:hover:not(:disabled) { background: #FFE4B5; }
+  .opt-c:hover:not(:disabled) { background: #C8F7DC; }
+  .opt-d:hover:not(:disabled) { background: #FFD0E8; }
+  .option-btn.correct { background: #D4EDDA !important; border-color: #2ECC71 !important; color: #1A7A3A !important; }
+  .option-btn.wrong { background: #FCDEDE !important; border-color: #E74C3C !important; color: #8B1A1A !important; }
+
+  /* QUESTION BOX */
+  .game-header { background: var(--card); border-bottom: 2px solid var(--border); padding: 14px 20px; display: flex; align-items: center; gap: 16px; }
+  .back-btn { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--border); background: var(--card); cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; }
+  .game-title { flex: 1; font-size: 17px; font-weight: 900; }
+  .game-timer { background: var(--accent); border-radius: 50px; padding: 6px 14px; font-size: 15px; font-weight: 900; color: #7A5C00; display: flex; gap: 6px; align-items: center; }
+  .game-body { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 18px; }
+  .question-box { background: var(--card); border-radius: var(--radius); border: 2.5px solid var(--border); padding: 24px 20px; text-align: center; }
+  .question-emoji { font-size: 56px; margin-bottom: 10px; }
+  .question-text { font-size: 20px; font-weight: 800; color: var(--text); line-height: 1.4; }
+  .question-hint { font-size: 14px; color: var(--text-muted); margin-top: 6px; font-weight: 600; }
+  .tts-btn { background: var(--primary-light); border: 2px solid var(--primary); color: var(--primary); border-radius: 50px; padding: 8px 20px; font-size: 15px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; margin-top: 10px; font-family: 'Nunito',sans-serif; }
+  .tts-btn:hover { background: var(--primary); color: white; }
+  .progress-bar-wrap { background: #E8E5FF; border-radius: 10px; height: 10px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary)); border-radius: 10px; transition: width 0.4s; }
+  .progress-info { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; color: var(--text-muted); margin-top: 4px; }
+
+  /* SPELL */
+  .spell-target { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; padding: 18px; min-height: 68px; background: var(--primary-light); border-radius: 16px; border: 3px dashed var(--primary); margin-bottom: 12px; }
+  .letter-slot { width: 46px; height: 50px; border-radius: 12px; border: 2.5px solid var(--primary); background: white; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 900; color: var(--primary); }
+  .letter-pool { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .drag-letter { width: 46px; height: 50px; border-radius: 12px; border: 2.5px solid var(--border); background: var(--card); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 900; cursor: pointer; transition: all 0.15s; color: var(--text); font-family: 'Nunito',sans-serif; }
+  .drag-letter:hover { background: var(--primary-light); border-color: var(--primary); transform: scale(1.1); }
+  .drag-letter.used { opacity: 0.3; pointer-events: none; }
+
+  /* SENTENCE */
+  .sentence-target { min-height: 60px; background: var(--primary-light); border-radius: 16px; border: 3px dashed var(--primary); padding: 12px 14px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+  .word-chip { background: var(--primary); color: white; padding: 6px 14px; border-radius: 50px; font-size: 15px; font-weight: 800; cursor: pointer; transition: all 0.2s; font-family: 'Nunito',sans-serif; }
+  .word-chip:hover { background: var(--secondary); transform: scale(1.05); }
+  .word-pool { display: flex; flex-wrap: wrap; gap: 8px; }
+  .word-tile { background: var(--card); border: 2.5px solid var(--border); padding: 8px 16px; border-radius: 50px; font-size: 15px; font-weight: 800; cursor: pointer; transition: all 0.2s; color: var(--text); font-family: 'Nunito',sans-serif; }
+  .word-tile:hover { border-color: var(--primary); background: var(--primary-light); }
+  .word-tile.used { opacity: 0.3; pointer-events: none; }
+
+  /* BIG BUTTONS */
+  .big-btn { background: var(--primary); color: white; border: none; border-radius: 50px; padding: 15px 36px; font-size: 17px; font-weight: 800; cursor: pointer; transition: all 0.2s; font-family: 'Nunito',sans-serif; display: inline-flex; align-items: center; gap: 10px; margin: 5px; box-shadow: 0 4px 16px rgba(108,99,255,0.28); }
+  .big-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(108,99,255,0.38); }
+  .big-btn.secondary { background: var(--card); color: var(--primary); border: 2.5px solid var(--primary); box-shadow: none; }
+
+  /* FEEDBACK */
+  .feedback-overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(108,99,255,0.82); z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s; backdrop-filter: blur(4px); }
+  .feedback-overlay.show { opacity: 1; pointer-events: all; }
+  .feedback-emoji { font-size: 90px; animation: popIn 0.4s ease; }
+  .feedback-msg { color: white; font-size: 28px; font-weight: 900; margin-top: 12px; }
+  .feedback-pts { color: var(--accent); font-size: 22px; font-weight: 800; margin-top: 6px; }
+  @keyframes popIn { 0%{transform:scale(0)} 70%{transform:scale(1.2)} 100%{transform:scale(1)} }
+
+  /* LEVEL COMPLETE */
+  .complete-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; text-align: center; }
+  .complete-badge { font-size: 100px; animation: spin 0.6s ease; }
+  @keyframes spin { 0%{transform:rotate(-20deg) scale(0)} 100%{transform:rotate(0) scale(1)} }
+  .complete-title { font-size: 28px; font-weight: 900; color: var(--primary); margin-top: 14px; }
+  .complete-pts { font-size: 46px; font-weight: 900; color: var(--secondary); }
+  .complete-sub { font-size: 17px; font-weight: 700; color: var(--text-muted); margin-bottom: 20px; }
+  .stars-row { font-size: 46px; margin: 10px 0; }
+
+  /* SETTINGS */
+  .settings-panel { background: var(--card); border-radius: var(--radius); border: 2.5px solid var(--border); padding: 18px; margin-bottom: 18px; }
+  .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #F0EDFF; gap: 16px; }
+  .setting-row:last-child { border-bottom: none; }
+  .setting-label { font-size: 15px; font-weight: 800; }
+  .setting-desc { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+  .toggle { width: 52px; height: 28px; border-radius: 14px; background: #D0D0D0; border: none; cursor: pointer; position: relative; transition: background 0.3s; flex-shrink: 0; }
+  .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: white; transition: left 0.3s; }
+  .toggle.on { background: var(--primary); }
+  .toggle.on::after { left: 27px; }
+  .font-btn { width: 36px; height: 36px; border-radius: 10px; border: 2px solid var(--border); background: var(--primary-light); color: var(--primary); font-weight: 900; font-size: 15px; cursor: pointer; font-family: 'Nunito',sans-serif; }
+  .font-btn:hover { background: var(--primary); color: white; }
+
+  /* LEADERBOARD */
+  .leaderboard-strip { background: var(--card); border-radius: var(--radius); border: 2.5px solid var(--border); padding: 14px; margin-bottom: 18px; }
+  .lb-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid #F0EDFF; }
+  .lb-row:last-child { border-bottom: none; }
+  .lb-rank { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900; }
+  .lb-rank.gold{background:#FFD93D;color:#7A5C00;} .lb-rank.silver{background:#E0E0E0;color:#555;} .lb-rank.bronze{background:#FFBC6B;color:#7A4000;} .lb-rank.other{background:#F0EDFF;color:var(--primary);}
+  .lb-name { flex: 1; font-weight: 700; font-size: 15px; }
+  .lb-pts { font-weight: 800; font-size: 15px; color: var(--primary); }
+
+  /* LEARN-TO-WRITE SCREEN */
+  .ltw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; padding: 20px; }
+  .ltw-letter-btn {
+    background: var(--card);
+    border: 2.5px solid var(--border);
+    border-radius: 16px;
+    padding: 14px 6px;
+    font-size: 28px; font-weight: 900;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    color: var(--primary);
+    font-family: 'Nunito',sans-serif;
+  }
+  .ltw-letter-btn:hover { background: var(--primary-light); border-color: var(--primary); transform: scale(1.08); }
+  .ltw-letter-btn .ltw-small { font-size: 13px; color: var(--text-muted); font-weight: 700; display: block; margin-top: 2px; }
+
+  /* LETTER DETAIL */
+  .letter-detail { padding: 20px; display: flex; flex-direction: column; gap: 16px; flex: 1; }
+  .letter-display-box {
+    background: linear-gradient(135deg, #1A1A2E, #16213E);
+    border-radius: 24px;
+    padding: 30px 20px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .letter-display-box::before { content:''; position:absolute; top:-20px; right:-20px; width:100px; height:100px; background:rgba(108,99,255,0.15); border-radius:50%; }
+  .letter-big { font-size: 100px; font-weight: 900; color: #FFFFFF; line-height: 1; }
+  .letter-small { font-size: 60px; font-weight: 900; color: rgba(255,255,255,0.6); line-height: 1; margin-top: 4px; }
+  .letter-word { font-size: 18px; font-weight: 800; color: rgba(255,255,255,0.8); margin-top: 10px; }
+
+  .ltw-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .ltw-action-btn {
+    border-radius: 18px;
+    padding: 18px 14px;
+    text-align: center;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: all 0.2s;
+    font-family: 'Nunito',sans-serif;
+  }
+  .ltw-action-btn:hover { transform: translateY(-2px); }
+  .ltw-btn-icon { font-size: 36px; margin-bottom: 6px; }
+  .ltw-btn-label { font-size: 15px; font-weight: 900; }
+  .ltw-btn-sub { font-size: 12px; font-weight: 600; margin-top: 2px; }
+
+  .ltw-pronounce { background: #E8F4FF; border-color: #3498DB; color: #1A5276; }
+  .ltw-pronounce:hover { background: #3498DB; color: white; }
+  .ltw-trace { background: #E8FFF2; border-color: #2ECC71; color: #1A7A3A; }
+  .ltw-trace:hover { background: #2ECC71; color: white; }
+  .ltw-stroke { background: #FFF3E0; border-color: #FF922B; color: #7A3B00; }
+  .ltw-stroke:hover { background: #FF922B; color: white; }
+  .ltw-word { background: #FFE8F4; border-color: #FF6B9D; color: #7A1040; }
+  .ltw-word:hover { background: #FF6B9D; color: white; }
+
+  /* SVG TRACE CANVAS */
+  .trace-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 500; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .trace-box { background: white; border-radius: 24px; padding: 24px; width: 100%; max-width: 380px; text-align: center; }
+  .trace-title { font-size: 20px; font-weight: 900; color: var(--primary); margin-bottom: 14px; }
+  .trace-canvas { border: 3px dashed var(--primary); border-radius: 16px; background: #FAFAFF; touch-action: none; cursor: crosshair; width: 100%; height: 240px; display: block; }
+  .trace-ghost { position: absolute; font-size: 160px; font-weight: 900; color: rgba(108,99,255,0.08); pointer-events: none; top: 50%; left: 50%; transform: translate(-50%, -50%); line-height: 1; }
+
+  .name-input { font-family: 'Nunito',sans-serif; font-size: 18px; font-weight: 700; padding: 14px 20px; border: 3px solid var(--border); border-radius: 50px; width: 100%; outline: none; color: var(--text); background: var(--card); transition: border-color 0.2s; }
+  .name-input:focus { border-color: var(--primary); }
+
+  .break-banner { background: var(--accent); border-radius: 16px; padding: 12px 16px; display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 14px; color: #7A5C00; margin-bottom: 4px; }
+
+  .confetti { position: fixed; width: 10px; height: 10px; border-radius: 2px; pointer-events: none; z-index: 2000; animation: confetti-fall 1.5s ease-in forwards; }
+  @keyframes confetti-fall { 0%{transform:translateY(-20px) rotate(0deg);opacity:1} 100%{transform:translateY(100vh) rotate(720deg);opacity:0} }
+
+  body.dark { --bg:#1A1830; --card:#241F3F; --text:#F0EEFF; --text-muted:#9B95C0; --border:rgba(150,140,255,0.2); }
+  body.focus-mode .topbar { display: none; }
+
+  .tab-row { display: flex; gap: 0; background: #F0EDFF; border-radius: 50px; padding: 4px; margin-bottom: 14px; }
+  .tab-btn { flex: 1; padding: 8px 4px; border: none; border-radius: 46px; background: transparent; font-family: 'Nunito',sans-serif; font-size: 13px; font-weight: 800; color: var(--text-muted); cursor: pointer; transition: all 0.2s; }
+  .tab-btn.active { background: var(--primary); color: white; }
+
+  @media(max-width:480px) { .levels-grid{grid-template-columns:1fr 1fr;} .options-grid{grid-template-columns:1fr 1fr;} .ltw-grid{grid-template-columns:repeat(auto-fill,minmax(64px,1fr));} }
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div id="screen-home" class="screen active">
+  <div class="topbar">
+    <div class="topbar-brand">🧠 NeuroLearn</div>
+    <div class="topbar-stats">
+      <div class="stat-chip">⭐ <span id="total-pts">0</span></div>
+      <div class="stat-chip">🏆 <span id="total-badges">0</span></div>
+    </div>
+    <div class="topbar-actions">
+      <button class="icon-btn" onclick="showSettings()">⚙️</button>
+      <button class="icon-btn" onclick="showLeaderboard()">🏅</button>
+    </div>
+  </div>
+  <div class="home-hero">
+    <div class="hero-mascot">🦊</div>
+    <div class="hero-title">Welcome back!</div>
+    <div class="hero-sub">Ready to learn and play?</div>
+    <div class="player-badge" id="player-badge" style="display:none">👤 <span id="player-name-display"></span></div>
+  </div>
+  <div class="home-content">
+    <div id="name-setup" style="margin-bottom:20px;">
+      <div class="section-title">👋 What's your name?</div>
+      <input type="text" class="name-input" id="player-name-input" placeholder="Enter your name..." maxlength="20"/>
+      <button class="big-btn" style="margin-top:12px;width:100%;justify-content:center;" onclick="saveName()">Let's Play! 🚀</button>
+    </div>
+    <div id="game-section" style="display:none;">
+      <div id="break-banner" class="break-banner" style="display:none;">
+        ☕ <div><div style="font-weight:900;">Time for a short break!</div><div style="font-size:12px;">Rest for 2 min — you've been learning hard!</div></div>
+        <button onclick="dismissBreak()" style="margin-left:auto;background:none;border:none;font-size:18px;cursor:pointer;">✕</button>
+      </div>
+      <div class="section-title">🗺️ Choose Your Level</div>
+      <div class="levels-grid" id="levels-grid"></div>
+      <div class="section-title">🏅 Top Scores</div>
+      <div class="leaderboard-strip" id="lb-preview"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div id="screen-settings" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="showHome()">←</button>
+    <div class="topbar-brand">⚙️ Settings</div>
+  </div>
+  <div style="padding:20px;">
+    <div class="settings-panel">
+      <div class="setting-row"><div><div class="setting-label">🎵 Sound Effects</div><div class="setting-desc">Audio cues for answers</div></div><button class="toggle on" id="toggle-sound" onclick="toggleSetting('sound')"></button></div>
+      <div class="setting-row"><div><div class="setting-label">🔊 Text-to-Speech</div><div class="setting-desc">Reads questions aloud</div></div><button class="toggle on" id="toggle-tts" onclick="toggleSetting('tts')"></button></div>
+      <div class="setting-row"><div><div class="setting-label">⏱️ Timer Challenges</div><div class="setting-desc">Bonus points for speed</div></div><button class="toggle on" id="toggle-timer" onclick="toggleSetting('timer')"></button></div>
+      <div class="setting-row"><div><div class="setting-label">🎯 Focus Mode</div><div class="setting-desc">Removes distractions</div></div><button class="toggle" id="toggle-focus" onclick="toggleSetting('focus')"></button></div>
+      <div class="setting-row"><div><div class="setting-label">☕ Break Reminders</div><div class="setting-desc">ADHD-friendly rest alerts</div></div><button class="toggle on" id="toggle-breaks" onclick="toggleSetting('breaks')"></button></div>
+      <div class="setting-row"><div><div class="setting-label">🌙 Dark Mode</div></div><button class="toggle" id="toggle-dark" onclick="toggleSetting('dark')"></button></div>
+      <div class="setting-row">
+        <div><div class="setting-label">🔤 Text Size</div></div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="font-btn" onclick="changeFontSize(-2)">A−</button>
+          <span id="font-size-val" style="font-weight:800;font-size:14px;">18px</span>
+          <button class="font-btn" onclick="changeFontSize(2)">A+</button>
+        </div>
+      </div>
+    </div>
+    <button class="big-btn secondary" style="width:100%;justify-content:center;" onclick="resetProgress()">🗑️ Reset Progress</button>
+  </div>
+</div>
+
+<!-- LEADERBOARD -->
+<div id="screen-leaderboard" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="showHome()">←</button>
+    <div class="topbar-brand">🏆 Leaderboard</div>
+  </div>
+  <div style="padding:20px;"><div id="lb-full" class="leaderboard-strip"></div></div>
+</div>
+
+<!-- LEARN TO WRITE -->
+<div id="screen-ltw" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="showHome()">←</button>
+    <div class="topbar-brand">✍️ Learn to Write</div>
+  </div>
+  <div style="padding:16px 16px 8px;">
+    <div class="tab-row">
+      <button class="tab-btn active" onclick="ltwTab('uppercase')">Uppercase</button>
+      <button class="tab-btn" onclick="ltwTab('lowercase')">Lowercase</button>
+      <button class="tab-btn" onclick="ltwTab('numbers')">Numbers</button>
+    </div>
+  </div>
+  <div class="ltw-grid" id="ltw-grid"></div>
+</div>
+
+<!-- LETTER DETAIL -->
+<div id="screen-letter" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="showLTW()">←</button>
+    <div class="topbar-brand" id="letter-topbar-title">Letter A</div>
+  </div>
+  <div class="letter-detail">
+    <div class="letter-display-box">
+      <div class="letter-big" id="ld-big">A</div>
+      <div class="letter-small" id="ld-small">a</div>
+      <div class="letter-word" id="ld-word">🍎 Apple</div>
+    </div>
+    <div class="ltw-actions">
+      <button class="ltw-action-btn ltw-pronounce" onclick="pronounceLetter()">
+        <div class="ltw-btn-icon">🔊</div>
+        <div class="ltw-btn-label">Pronounce</div>
+        <div class="ltw-btn-sub">Hear the sound</div>
+      </button>
+      <button class="ltw-action-btn ltw-trace" onclick="openTrace()">
+        <div class="ltw-btn-icon">✍️</div>
+        <div class="ltw-btn-label">Trace It</div>
+        <div class="ltw-btn-sub">Draw & practice</div>
+      </button>
+      <button class="ltw-action-btn ltw-stroke" onclick="showStrokeOrder()">
+        <div class="ltw-btn-icon">🖊️</div>
+        <div class="ltw-btn-label">Stroke Order</div>
+        <div class="ltw-btn-sub">Step-by-step</div>
+      </button>
+      <button class="ltw-action-btn ltw-word" onclick="speakWordExample()">
+        <div class="ltw-btn-icon">📖</div>
+        <div class="ltw-btn-label">Word Example</div>
+        <div class="ltw-btn-sub">Hear a word</div>
+      </button>
+    </div>
+    <div id="stroke-info" style="display:none; background:var(--primary-light); border-radius:16px; padding:16px; border:2px solid var(--primary);">
+      <div style="font-weight:900;font-size:16px;color:var(--primary);margin-bottom:8px;">✏️ How to write <span id="stroke-letter"></span>:</div>
+      <div id="stroke-steps" style="font-size:15px;font-weight:700;color:var(--text);line-height:2;"></div>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="big-btn secondary" style="flex:1;justify-content:center;" id="prev-letter-btn" onclick="navigateLetter(-1)">← Prev</button>
+      <button class="big-btn" style="flex:1;justify-content:center;" id="next-letter-btn" onclick="navigateLetter(1)">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="screen-game" class="screen">
+  <div class="game-header">
+    <button class="back-btn" onclick="showHome()">←</button>
+    <div class="game-title" id="game-title">Level 1</div>
+    <div class="game-timer" id="game-timer" style="display:none">⏱ <span id="timer-val">30</span>s</div>
+  </div>
+  <div class="game-body">
+    <div>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" id="q-progress" style="width:0%"></div></div>
+      <div class="progress-info"><span id="q-count">Q 1 of 5</span><span id="q-pts">0 pts</span></div>
+    </div>
+    <div class="question-box">
+      <div class="question-emoji" id="q-emoji">🔤</div>
+      <div class="question-text" id="q-text">Loading...</div>
+      <div class="question-hint" id="q-hint"></div>
+      <button class="tts-btn" id="tts-btn" onclick="speakQuestion()">🔊 Hear it</button>
+    </div>
+    <div id="answer-area"></div>
+  </div>
+</div>
+
+<!-- LEVEL COMPLETE -->
+<div id="screen-complete" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="showHome()">←</button>
+    <div class="topbar-brand">🎉 Level Complete!</div>
+  </div>
+  <div class="complete-screen">
+    <div class="complete-badge" id="complete-badge">🏆</div>
+    <div class="complete-title" id="complete-title">Amazing!</div>
+    <div class="stars-row" id="complete-stars">⭐⭐⭐</div>
+    <div class="complete-pts" id="complete-pts">+0 pts</div>
+    <div class="complete-sub" id="complete-sub">Keep it up!</div>
+    <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:8px;">
+      <button class="big-btn" onclick="retryLevel()">🔄 Play Again</button>
+      <button class="big-btn secondary" onclick="showHome()">🏠 Home</button>
+    </div>
+  </div>
+</div>
+
+<!-- Feedback -->
+<div class="feedback-overlay" id="feedback-overlay">
+  <div class="feedback-emoji" id="fb-emoji">🎉</div>
+  <div class="feedback-msg" id="fb-msg">Correct!</div>
+  <div class="feedback-pts" id="fb-pts">+10 pts</div>
+</div>
+
+<!-- Trace Modal -->
+<div class="trace-modal" id="trace-modal" style="display:none;">
+  <div class="trace-box">
+    <div class="trace-title" id="trace-title">Trace the letter A</div>
+    <div style="position:relative;">
+      <canvas id="trace-canvas" class="trace-canvas" width="320" height="240"></canvas>
+      <div class="trace-ghost" id="trace-ghost">A</div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      <button class="big-btn secondary" style="flex:1;justify-content:center;font-size:15px;" onclick="clearTrace()">🗑️ Clear</button>
+      <button class="big-btn" style="flex:1;justify-content:center;font-size:15px;" onclick="closeTrace()">✅ Done</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const LEVELS = [
+  { id:1, name:'Alphabet', icon:'🔤', color:'#6C63FF', desc:'Letters A-Z', questions:[
+    {type:'mcq',emoji:'🅰️',text:'Which letter comes after D?',hint:'Think of the alphabet song!',options:['C','E','B','F'],answer:'E',pts:10},
+    {type:'mcq',emoji:'🔡',text:'Which is the lowercase of B?',hint:'Same letter, smaller size',options:['d','b','p','q'],answer:'b',pts:10},
+    {type:'mcq',emoji:'🌟',text:'What letter does SUN start with?',hint:'Sound it out — S...S...SUN!',options:['U','N','S','A'],answer:'S',pts:10},
+    {type:'mcq',emoji:'🐕',text:'What letter does DOG start with?',hint:'D... Duh... Dog!',options:['B','G','D','P'],answer:'D',pts:10},
+    {type:'mcq',emoji:'🍎',text:'What letter does APPLE start with?',hint:'A is for...?',options:['P','E','O','A'],answer:'A',pts:10},
+  ]},
+  { id:2, name:'Numbers', icon:'🔢', color:'#FF922B', desc:'Count & Recognize', questions:[
+    {type:'mcq',emoji:'🍭🍭🍭',text:'How many candies? 🍭🍭🍭',hint:'Count one by one!',options:['2','4','3','5'],answer:'3',pts:10},
+    {type:'mcq',emoji:'🔢',text:'What number comes after 7?',hint:'7 then...?',options:['6','9','8','10'],answer:'8',pts:10},
+    {type:'mcq',emoji:'⭐⭐⭐⭐⭐',text:'Count the stars! ⭐⭐⭐⭐⭐',hint:'Point to each star!',options:['4','6','3','5'],answer:'5',pts:10},
+    {type:'mcq',emoji:'🐣',text:'What is 2 + 3?',hint:'Add on your fingers!',options:['4','6','5','7'],answer:'5',pts:15},
+    {type:'mcq',emoji:'🔢',text:'Which is the biggest number?',hint:'The largest!',options:['3','7','1','5'],answer:'7',pts:10},
+  ]},
+  { id:3, name:'Spelling', icon:'✏️', color:'#FF6B9D', desc:'Fill letters & spell', questions:[
+    {type:'spell',emoji:'🐱',text:'Spell the animal:',hint:'C _ T',word:'CAT',pts:20},
+    {type:'spell',emoji:'🐶',text:'Spell the animal:',hint:'D _ G',word:'DOG',pts:20},
+    {type:'spell',emoji:'☀️',text:'Spell this word:',hint:'S _ N',word:'SUN',pts:20},
+    {type:'spell',emoji:'🌈',text:'Spell this word:',hint:'R _ D',word:'RED',pts:20},
+    {type:'spell',emoji:'🐟',text:'Spell this word:',hint:'F _ S H',word:'FISH',pts:20},
+  ]},
+  { id:4, name:'Grammar', icon:'📚', color:'#20C997', desc:'Build sentences', questions:[
+    {type:'sentence',emoji:'🐱',text:'Arrange into a sentence:',words:['The','cat','is','fluffy'],answer:'The cat is fluffy',pts:25},
+    {type:'sentence',emoji:'🌞',text:'Arrange into a sentence:',words:['The','sun','is','bright'],answer:'The sun is bright',pts:25},
+    {type:'sentence',emoji:'🐶',text:'Arrange into a sentence:',words:['I','have','a','dog'],answer:'I have a dog',pts:25},
+    {type:'sentence',emoji:'📚',text:'Arrange into a sentence:',words:['She','reads','books'],answer:'She reads books',pts:25},
+    {type:'sentence',emoji:'⚽',text:'Arrange into a sentence:',words:['We','play','in','the','park'],answer:'We play in the park',pts:25},
+  ]},
+  { id:5, name:'Reading', icon:'📖', color:'#F4A261', desc:'Read & understand', questions:[
+    {type:'mcq',emoji:'📖',text:'"Tom has a red ball. He plays with it every day." — What color is the ball?',hint:'Look for the color word!',options:['Blue','Green','Red','Yellow'],answer:'Red',pts:30},
+    {type:'mcq',emoji:'🌧️',text:'"It is raining. Mia wears a coat." — Why does Mia wear a coat?',hint:'What does the text say?',options:['It is cold','It is raining','She likes coats','It is windy'],answer:'It is raining',pts:30},
+    {type:'mcq',emoji:'🐕',text:'"Ben has a dog named Max. Max loves to run." — What does Max love?',hint:'Read the last sentence!',options:['Sleep','Swim','Run','Jump'],answer:'Run',pts:30},
+    {type:'mcq',emoji:'🍎',text:'"Ana eats an apple every morning." — When does Ana eat?',hint:'Look for the time word!',options:['At night','Afternoon','Every morning','At lunch'],answer:'Every morning',pts:30},
+    {type:'mcq',emoji:'🌟',text:'"Sam works hard at school. He gets a gold star." — Why does Sam get a star?',hint:'What did Sam do?',options:['He sleeps a lot','He works hard','He is tall','He is funny'],answer:'He works hard',pts:30},
+  ]},
+];
+
+const LETTER_DATA = {
+  A:{word:'🍎 Apple',sounds:'ay',stroke:'1. Start at top center\n2. Stroke down-left\n3. Stroke down-right\n4. Draw crossbar in middle'},
+  B:{word:'🐝 Bee',sounds:'buh',stroke:'1. Draw a tall vertical line down\n2. Add a bump at the top right\n3. Add a larger bump at the bottom right'},
+  C:{word:'🐱 Cat',sounds:'kuh',stroke:'1. Start from top right\n2. Curve left and around\n3. End at bottom right'},
+  D:{word:'🐬 Dolphin',sounds:'duh',stroke:'1. Draw a tall vertical line\n2. Add a large curve to the right from top to bottom'},
+  E:{word:'🥚 Egg',sounds:'eh',stroke:'1. Draw a vertical line down\n2. Add three horizontal lines (top, middle, bottom)'},
+  F:{word:'🐟 Fish',sounds:'fuh',stroke:'1. Draw a vertical line down\n2. Add a line at the top going right\n3. Add a shorter line in the middle going right'},
+  G:{word:'🍇 Grapes',sounds:'guh',stroke:'1. Curve like C from top right\n2. Add a horizontal bar at middle going inward'},
+  H:{word:'🏠 House',sounds:'huh',stroke:'1. Draw left vertical line\n2. Draw right vertical line\n3. Connect with horizontal bar in middle'},
+  I:{word:'🍦 Ice cream',sounds:'ih',stroke:'1. Draw a vertical line straight down\n2. Add a short top bar\n3. Add a short bottom bar'},
+  J:{word:'🃏 Joker',sounds:'juh',stroke:'1. Draw a vertical line down\n2. Curve at the bottom to the left'},
+  K:{word:'🪁 Kite',sounds:'kuh',stroke:'1. Draw a vertical line down\n2. Add a diagonal line from mid-point up-right\n3. Add a diagonal line from mid-point down-right'},
+  L:{word:'🦁 Lion',sounds:'luh',stroke:'1. Draw a vertical line down\n2. Add a horizontal line at the bottom going right'},
+  M:{word:'🌙 Moon',sounds:'muh',stroke:'1. Up stroke from bottom-left\n2. Peak in the middle\n3. Down and up again\n4. Stroke down to bottom-right'},
+  N:{word:'🌙 Night',sounds:'nuh',stroke:'1. Stroke down from top-left\n2. Diagonal up to top-right\n3. Stroke down to bottom-right'},
+  O:{word:'🍊 Orange',sounds:'oh',stroke:'1. Start at top\n2. Curve left going down\n3. Curve right coming back up\n4. Close the circle at top'},
+  P:{word:'🐧 Penguin',sounds:'puh',stroke:'1. Draw a vertical line down\n2. Add a bump at the top right (half circle)'},
+  Q:{word:'👑 Queen',sounds:'kwuh',stroke:'1. Draw a full circle (like O)\n2. Add a small diagonal line at bottom right'},
+  R:{word:'🌈 Rainbow',sounds:'ruh',stroke:'1. Draw a vertical line down\n2. Add a bump at top right\n3. Add a diagonal leg from mid-right down'},
+  S:{word:'☀️ Sun',sounds:'suh',stroke:'1. Start from top right\n2. Curve left at top\n3. Curve right at middle\n4. End curving left at bottom'},
+  T:{word:'🌳 Tree',sounds:'tuh',stroke:'1. Draw a vertical line down the center\n2. Draw a horizontal line across the top'},
+  U:{word:' Umbrella',sounds:'uh',stroke:'1. Draw left side down\n2. Curve at the bottom\n3. Draw right side back up'},
+  V:{word:'🦋 Violet',sounds:'vuh',stroke:'1. Stroke from top-left diagonally to bottom center\n2. Stroke from bottom center diagonally to top-right'},
+  W:{word:'🌊 Water',sounds:'wuh',stroke:'1. Stroke down-right\n2. Up to middle\n3. Down-right again\n4. Up to end top-right'},
+  X:{word:'🎁 X-mas',sounds:'ex',stroke:'1. Stroke from top-left to bottom-right\n2. Stroke from top-right to bottom-left'},
+  Y:{word:'🧶 Yarn',sounds:'yuh',stroke:'1. Stroke from top-left to center\n2. Stroke from top-right to center\n3. Continue center stroke straight down'},
+  Z:{word:'🦓 Zebra',sounds:'zuh',stroke:'1. Draw a horizontal line at top going right\n2. Diagonal line from top-right to bottom-left\n3. Horizontal line at bottom going right'},
+};
+
+const NUMS = {
+  '0':{word:'⭕ Zero',sounds:'zero',stroke:'Oval shape — draw a full ellipse'  },
+  '1':{word:'☝️ One',sounds:'one',stroke:'1. Small serif at top\n2. Straight vertical stroke down'},
+  '2':{word:'✌️ Two',sounds:'two',stroke:'1. Curve from top-right to middle-left\n2. Diagonal to bottom-right\n3. Horizontal line at bottom'},
+  '3':{word:'🎯 Three',sounds:'three',stroke:'1. Curve inward at top-right\n2. Point at middle\n3. Larger curve inward at bottom-right'},
+  '4':{word:'🍀 Four',sounds:'four',stroke:'1. Down-left diagonal\n2. Horizontal right\n3. Vertical down from top-right'},
+  '5':{word:'🖐️ Five',sounds:'five',stroke:'1. Top horizontal right\n2. Vertical down partway\n3. Curve right then close at bottom'},
+  '6':{word:'🎲 Six',sounds:'six',stroke:'1. Curve from top going left and down\n2. Loop closed circle at bottom'},
+  '7':{word:'🌈 Seven',sounds:'seven',stroke:'1. Horizontal at top\n2. Diagonal down-left'},
+  '8':{word:'♾️ Eight',sounds:'eight',stroke:'1. Draw two circles stacked\n2. Or draw figure-eight in one stroke'},
+  '9':{word:'🎈 Nine',sounds:'nine',stroke:'1. Draw closed circle at top\n2. Stroke straight down from circle bottom'},
+};
+
+let ltwMode = 'uppercase';
+let currentLetter = 'A';
+let currentLetterList = [];
+let currentLetterIndex = 0;
+
+let state = {
+  player:'', totalPoints:0, badges:0,
+  levelProgress:[0,0,0,0,0], levelStars:[0,0,0,0,0],
+  unlockedLevels:[true,true,true,true,true],
+  leaderboard:[],
+  settings:{sound:true,tts:true,timer:true,focus:false,breaks:true,dark:false},
+  fontSize:18, questionsAnswered:0,
+};
+
+let currentLevel=0, currentQ=0, sessionPts=0;
+let timerInterval=null, timerVal=30;
+let spellingWord='', spellingChosen=[];
+let sentenceChosen=[], sentenceWords=[];
+
+function loadState() {
+  const s = localStorage.getItem('neurolearn_state_v2');
+  if (s) { const p=JSON.parse(s); state={...state,...p}; state.unlockedLevels=[true,true,true,true,true]; }
+  applySettings(); updateFontSize();
+}
+function saveState() { localStorage.setItem('neurolearn_state_v2', JSON.stringify(state)); }
+
+function applySettings() {
+  document.body.classList.toggle('dark', !!state.settings.dark);
+  document.body.classList.toggle('focus-mode', !!state.settings.focus);
+  ['sound','tts','timer','focus','breaks','dark'].forEach(k => {
+    const el=document.getElementById('toggle-'+k); if(el) el.classList.toggle('on',!!state.settings[k]);
+  });
+}
+function updateFontSize() {
+  document.documentElement.style.setProperty('--font-size-base', state.fontSize+'px');
+  const el=document.getElementById('font-size-val'); if(el) el.textContent=state.fontSize+'px';
+}
+function showScreen(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById('screen-'+id).classList.add('active'); }
+function showHome() { stopTimer(); renderHome(); showScreen('home'); }
+function showSettings() { applySettings(); showScreen('settings'); }
+function showLeaderboard() { renderLeaderboard(); showScreen('leaderboard'); }
+
+function showLTW() {
+  showScreen('ltw');
+  ltwMode='uppercase';
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
+  renderLTWGrid();
+}
+
+function ltwTab(mode) {
+  ltwMode=mode;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  renderLTWGrid();
+}
+
+function renderLTWGrid() {
+  const grid=document.getElementById('ltw-grid');
+  grid.innerHTML='';
+  let items=[];
+  if(ltwMode==='uppercase') items=[...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'];
+  else if(ltwMode==='lowercase') items=[...'abcdefghijklmnopqrstuvwxyz'];
+  else items=[...Array(10).keys()].map(n=>n.toString());
+  currentLetterList=items;
+  items.forEach((ch,i)=>{
+    const btn=document.createElement('button');
+    btn.className='ltw-letter-btn';
+    const data = ltwMode==='numbers' ? NUMS[ch] : (LETTER_DATA[ch.toUpperCase()]||{});
+    btn.innerHTML=`${ch}<span class="ltw-small">${ltwMode==='numbers'?data.sounds||'':ch.toLowerCase()}</span>`;
+    btn.onclick=()=>openLetterDetail(ch,i,items);
+    grid.appendChild(btn);
+  });
+}
+
+function openLetterDetail(ch, idx, list) {
+  currentLetter=ch; currentLetterIndex=idx; currentLetterList=list;
+  const upper=ch.toUpperCase();
+  const isNum=!isNaN(ch);
+  const data=isNum ? NUMS[ch] : (LETTER_DATA[upper]||{word:'',sounds:'',stroke:''});
+  document.getElementById('letter-topbar-title').textContent = isNum ? `Number ${ch}` : `Letter ${upper}`;
+  document.getElementById('ld-big').textContent=isNum?ch:ch.toUpperCase();
+  document.getElementById('ld-small').textContent=isNum?data.sounds:ch.toLowerCase();
+  document.getElementById('ld-word').textContent=data.word||'';
+  document.getElementById('stroke-info').style.display='none';
+  document.getElementById('prev-letter-btn').disabled=idx===0;
+  document.getElementById('next-letter-btn').disabled=idx===list.length-1;
+  showScreen('letter');
+}
+
+function navigateLetter(dir) {
+  const newIdx=currentLetterIndex+dir;
+  if(newIdx<0||newIdx>=currentLetterList.length) return;
+  openLetterDetail(currentLetterList[newIdx],newIdx,currentLetterList);
+}
+
+function pronounceLetter() {
+  if(!window.speechSynthesis) return;
+  const isNum=!isNaN(currentLetter);
+  const data=isNum?NUMS[currentLetter]:(LETTER_DATA[currentLetter.toUpperCase()]||{});
+  const text=isNum?`The number ${currentLetter}, ${data.sounds}`:`The letter ${currentLetter.toUpperCase()}, sounds like ${data.sounds}`;
+  const utt=new SpeechSynthesisUtterance(text);
+  utt.rate=0.8; utt.pitch=1.2;
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utt);
+}
+
+function speakWordExample() {
+  if(!window.speechSynthesis) return;
+  const isNum=!isNaN(currentLetter);
+  const data=isNum?NUMS[currentLetter]:(LETTER_DATA[currentLetter.toUpperCase()]||{});
+  const wordText=(data.word||'').replace(/[^\w\s]/gi,'').trim();
+  if(!wordText) return;
+  const utt=new SpeechSynthesisUtterance(wordText);
+  utt.rate=0.8; utt.pitch=1.1;
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utt);
+}
+
+function showStrokeOrder() {
+  const info=document.getElementById('stroke-info');
+  const isNum=!isNaN(currentLetter);
+  const data=isNum?NUMS[currentLetter]:(LETTER_DATA[currentLetter.toUpperCase()]||{});
+  document.getElementById('stroke-letter').textContent=currentLetter.toUpperCase();
+  document.getElementById('stroke-steps').innerHTML=(data.stroke||'No stroke info available').replace(/\n/g,'<br>');
+  info.style.display=info.style.display==='none'?'block':'none';
+}
+
+function openTrace() {
+  document.getElementById('trace-title').textContent=`Trace the ${!isNaN(currentLetter)?'number':'letter'} ${currentLetter.toUpperCase()}`;
+  document.getElementById('trace-ghost').textContent=currentLetter.toUpperCase();
+  document.getElementById('trace-modal').style.display='flex';
+  initCanvas();
+}
+function closeTrace() { document.getElementById('trace-modal').style.display='none'; }
+
+function initCanvas() {
+  const canvas=document.getElementById('trace-canvas');
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.strokeStyle='#6C63FF';
+  ctx.lineWidth=6;
+  ctx.lineCap='round';
+  ctx.lineJoin='round';
+  let drawing=false, lx=0, ly=0;
+  function getPos(e) {
+    const r=canvas.getBoundingClientRect();
+    const t=e.touches?e.touches[0]:e;
+    return {x:(t.clientX-r.left)*(canvas.width/r.width), y:(t.clientY-r.top)*(canvas.height/r.height)};
+  }
+  canvas.onmousedown=canvas.ontouchstart=e=>{e.preventDefault();drawing=true;const p=getPos(e);lx=p.x;ly=p.y;};
+  canvas.onmousemove=canvas.ontouchmove=e=>{e.preventDefault();if(!drawing)return;const p=getPos(e);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(p.x,p.y);ctx.stroke();lx=p.x;ly=p.y;};
+  canvas.onmouseup=canvas.ontouchend=()=>drawing=false;
+}
+function clearTrace() { const c=document.getElementById('trace-canvas'); c.getContext('2d').clearRect(0,0,c.width,c.height); }
+
+function saveName() {
+  const v=document.getElementById('player-name-input').value.trim(); if(!v)return;
+  state.player=v; saveState(); renderHome();
+}
+
+function renderHome() {
+  const isNamed=!!state.player;
+  document.getElementById('name-setup').style.display=isNamed?'none':'block';
+  document.getElementById('game-section').style.display=isNamed?'block':'none';
+  if(isNamed) {
+    document.getElementById('player-badge').style.display='inline-flex';
+    document.getElementById('player-name-display').textContent=state.player;
+    document.getElementById('total-pts').textContent=state.totalPoints;
+    document.getElementById('total-badges').textContent=state.badges;
+    renderLevels(); renderLBPreview();
+    if(state.settings.breaks && state.questionsAnswered>0 && state.questionsAnswered%10===0)
+      document.getElementById('break-banner').style.display='flex';
+  }
+}
+function dismissBreak() { document.getElementById('break-banner').style.display='none'; }
+
+function renderLevels() {
+  const grid=document.getElementById('levels-grid');
+  grid.innerHTML='';
+
+  // Special Write card — full width
+  const writeCard=document.createElement('div');
+  writeCard.className='level-card-write';
+  writeCard.innerHTML=`
+    <div class="write-card" onclick="showLTW()">
+      <div class="write-card-icon">✍️</div>
+      <div class="write-card-text">
+        <div class="write-card-title">Learn to Write & Pronounce</div>
+        <div class="write-card-sub">Trace letters, hear sounds, see stroke order & word examples</div>
+        <span class="write-card-badge">⭐ Special Mode</span>
+      </div>
+      <div class="write-card-arrow">→</div>
+    </div>`;
+  grid.appendChild(writeCard);
+
+  LEVELS.forEach((lvl,i)=>{
+    const stars=state.levelStars[i]||0;
+    const progress=state.levelProgress[i]||0;
+    const card=document.createElement('div');
+    card.className=`level-card lvl-${i+1}`;
+    card.innerHTML=`
+      <div class="level-icon">${lvl.icon}</div>
+      <div class="level-name">${lvl.name}</div>
+      <div class="level-sub">${lvl.desc}</div>
+      <div class="level-stars">${'⭐'.repeat(stars)}${'☆'.repeat(3-stars)}</div>
+      <div class="level-progress"><div class="level-progress-fill" style="width:${progress}%"></div></div>`;
+    card.onclick=()=>startLevel(i);
+    grid.appendChild(card);
+  });
+}
+
+function renderLBPreview() {
+  const el=document.getElementById('lb-preview');
+  const sorted=[...state.leaderboard].sort((a,b)=>b.pts-a.pts).slice(0,3);
+  if(!sorted.length){el.innerHTML='<div style="text-align:center;color:var(--text-muted);padding:16px;font-weight:700;">No scores yet. Play to get on the board!</div>';return;}
+  const medals=['gold','silver','bronze'];
+  el.innerHTML=sorted.map((e,i)=>`<div class="lb-row"><div class="lb-rank ${medals[i]||'other'}">${i+1}</div><div class="lb-name">${e.name}</div><div class="lb-pts">⭐ ${e.pts}</div></div>`).join('');
+}
+
+function renderLeaderboard() {
+  const el=document.getElementById('lb-full');
+  const sorted=[...state.leaderboard].sort((a,b)=>b.pts-a.pts);
+  if(!sorted.length){el.innerHTML='<div style="text-align:center;color:var(--text-muted);padding:32px;font-weight:700;">🏆 No scores yet!</div>';return;}
+  const medals=['gold','silver','bronze'];
+  el.innerHTML=sorted.map((e,i)=>`<div class="lb-row"><div class="lb-rank ${medals[i]||'other'}">${i+1}</div><div><div class="lb-name">${e.name}</div><div style="font-size:12px;color:var(--text-muted);font-weight:600;">Level ${e.level} · ${e.date}</div></div><div class="lb-pts">⭐ ${e.pts}</div></div>`).join('');
+}
+
+function startLevel(idx) { currentLevel=idx; currentQ=0; sessionPts=0; showScreen('game'); document.getElementById('game-title').textContent=`Level ${idx+1}: ${LEVELS[idx].name}`; renderQuestion(); }
+
+function renderQuestion() {
+  const lvl=LEVELS[currentLevel]; const q=lvl.questions[currentQ]; const total=lvl.questions.length;
+  document.getElementById('q-progress').style.width=((currentQ/total)*100)+'%';
+  document.getElementById('q-count').textContent=`Q ${currentQ+1} of ${total}`;
+  document.getElementById('q-pts').textContent=sessionPts+' pts';
+  document.getElementById('q-emoji').textContent=q.emoji;
+  document.getElementById('q-text').textContent=q.text;
+  document.getElementById('q-hint').textContent=q.hint||'';
+  document.getElementById('tts-btn').style.display=state.settings.tts?'inline-flex':'none';
+  stopTimer(); if(state.settings.timer) startTimer();
+  if(q.type==='mcq') renderMCQ(q);
+  else if(q.type==='spell') renderSpell(q);
+  else if(q.type==='sentence') renderSentence(q);
+}
+
+const OPT_CLASSES=['opt-a','opt-b','opt-c','opt-d'];
+const OPT_LABELS=['A','B','C','D'];
+
+function renderMCQ(q) {
+  const area=document.getElementById('answer-area');
+  const shuffled=[...q.options].sort(()=>Math.random()-0.5);
+  area.innerHTML=`<div class="options-grid">${shuffled.map((o,i)=>
+    `<button class="option-btn ${OPT_CLASSES[i]}" data-label="${OPT_LABELS[i]}" onclick="checkMCQ(this,'${o}','${q.answer}',${q.pts})">${o}</button>`
+  ).join('')}</div>`;
+}
+
+function checkMCQ(btn, chosen, answer, pts) {
+  stopTimer(); document.querySelectorAll('.option-btn').forEach(b=>b.disabled=true);
+  if(chosen===answer){ btn.classList.add('correct'); let bonus=state.settings.timer&&timerVal>20?5:0; awardPoints(pts+bonus,true); }
+  else { btn.classList.add('wrong'); document.querySelectorAll('.option-btn').forEach(b=>{if(b.textContent===answer)b.classList.add('correct');}); showFeedback(false,0); }
+  state.questionsAnswered++; setTimeout(nextQuestion,1400);
+}
+
+function renderSpell(q) {
+  spellingWord=q.word; spellingChosen=[];
+  const extras=['X','Z','Q','Y','V','K'].slice(0,Math.max(2,4-q.word.length%3));
+  const letters=[...q.word,...extras].sort(()=>Math.random()-0.5);
+  document.getElementById('answer-area').innerHTML=`
+    <div class="spell-target" id="spell-target">${Array(q.word.length).fill('<div class="letter-slot">_</div>').join('')}</div>
+    <div class="letter-pool" id="letter-pool">${letters.map((l,i)=>`<button class="drag-letter" id="dl-${i}" onclick="pickLetter(this,'${l}')">${l}</button>`).join('')}</div>
+    <button class="big-btn" style="width:100%;justify-content:center;margin-top:12px;" onclick="checkSpell(${q.pts})">✅ Check</button>`;
+}
+
+function pickLetter(btn,letter) {
+  if(spellingChosen.length>=spellingWord.length)return;
+  btn.classList.add('used'); spellingChosen.push({letter,btnId:btn.id}); updateSpellTarget();
+}
+function updateSpellTarget() {
+  document.querySelectorAll('.letter-slot').forEach((s,i)=>{s.textContent=spellingChosen[i]?spellingChosen[i].letter:'_';});
+}
+function checkSpell(pts) {
+  const attempt=spellingChosen.map(c=>c.letter).join(''); stopTimer();
+  if(attempt===spellingWord){let bonus=state.settings.timer&&timerVal>20?10:0;awardPoints(pts+bonus,true);}
+  else{showFeedback(false,0);document.getElementById('spell-target').innerHTML=spellingWord.split('').map(l=>`<div class="letter-slot" style="border-color:var(--green);color:var(--green);">${l}</div>`).join('');}
+  state.questionsAnswered++; setTimeout(nextQuestion,1800);
+}
+
+function renderSentence(q) {
+  sentenceWords=[...q.words].sort(()=>Math.random()-0.5); sentenceChosen=[];
+  document.getElementById('answer-area').innerHTML=`
+    <div class="sentence-target" id="sent-target"><div style="color:var(--text-muted);font-size:14px;font-weight:700;">Tap words to build the sentence...</div></div>
+    <div class="word-pool" id="word-pool">${sentenceWords.map((w,i)=>`<button class="word-tile" id="wt-${i}" onclick="pickWord(this,'${w}')">${w}</button>`).join('')}</div>
+    <div style="display:flex;gap:10px;margin-top:12px;">
+      <button class="big-btn secondary" style="flex:1;justify-content:center;" onclick="clearSentence()">🔄 Clear</button>
+      <button class="big-btn" style="flex:2;justify-content:center;" onclick="checkSentence('${q.answer}',${q.pts})">✅ Check</button>
+    </div>`;
+}
+
+function pickWord(btn,word){btn.classList.add('used');sentenceChosen.push({word,btnId:btn.id});updateSentenceTarget();}
+function updateSentenceTarget(){const el=document.getElementById('sent-target');if(!sentenceChosen.length){el.innerHTML='<div style="color:var(--text-muted);font-size:14px;font-weight:700;">Tap words to build the sentence...</div>';return;}el.innerHTML=sentenceChosen.map((c,i)=>`<div class="word-chip" onclick="removeWord(${i})">${c.word} ✕</div>`).join('');}
+function removeWord(i){const r=sentenceChosen.splice(i,1)[0];document.getElementById(r.btnId).classList.remove('used');updateSentenceTarget();}
+function clearSentence(){sentenceChosen.forEach(c=>document.getElementById(c.btnId).classList.remove('used'));sentenceChosen=[];updateSentenceTarget();}
+function checkSentence(answer,pts){const attempt=sentenceChosen.map(c=>c.word).join(' ');stopTimer();if(attempt===answer){let bonus=state.settings.timer&&timerVal>20?12:0;awardPoints(pts+bonus,true);}else{showFeedback(false,0);document.getElementById('sent-target').innerHTML=`<div style="color:var(--green);font-weight:800;font-size:16px;">✅ ${answer}</div>`;}state.questionsAnswered++;setTimeout(nextQuestion,2000);}
+
+function nextQuestion(){currentQ++;if(currentQ>=LEVELS[currentLevel].questions.length)completeLevel();else renderQuestion();}
+
+function completeLevel(){
+  const lvl=LEVELS[currentLevel];
+  const maxPts=lvl.questions.reduce((a,q)=>a+q.pts,0)+(state.settings.timer?50:0);
+  const pct=sessionPts/maxPts;
+  const stars=pct>=0.8?3:pct>=0.5?2:1;
+  state.levelStars[currentLevel]=Math.max(state.levelStars[currentLevel]||0,stars);
+  state.levelProgress[currentLevel]=100;
+  state.totalPoints+=sessionPts;
+  state.badges+=stars;
+  state.leaderboard.push({name:state.player,pts:sessionPts,level:currentLevel+1,date:new Date().toLocaleDateString()});
+  if(state.leaderboard.length>20) state.leaderboard.sort((a,b)=>b.pts-a.pts).splice(20);
+  saveState(); spawnConfetti();
+  document.getElementById('complete-badge').textContent=['🥉','🥈','🥇'][stars-1];
+  document.getElementById('complete-title').textContent=stars===3?'Perfect! Outstanding! 🎊':stars===2?'Great Work! 🎉':'Good Effort! 👍';
+  document.getElementById('complete-stars').textContent='⭐'.repeat(stars)+'☆'.repeat(3-stars);
+  document.getElementById('complete-pts').textContent='+'+sessionPts+' pts';
+  document.getElementById('complete-sub').textContent='Keep learning and growing!';
+  showScreen('complete');
+}
+function retryLevel(){startLevel(currentLevel);}
+
+function awardPoints(pts,correct){sessionPts+=pts;document.getElementById('q-pts').textContent=sessionPts+' pts';showFeedback(true,pts);}
+
+function showFeedback(correct,pts){
+  const overlay=document.getElementById('feedback-overlay');
+  document.getElementById('fb-emoji').textContent=correct?['🎉','🌟','🏆','✨','🚀'][Math.floor(Math.random()*5)]:'😅';
+  document.getElementById('fb-msg').textContent=correct?['Awesome!','Correct!','Brilliant!','Well done!','You got it!'][Math.floor(Math.random()*5)]:'Not quite!';
+  document.getElementById('fb-pts').textContent=correct?'+'+pts+' pts':'Keep trying!';
+  overlay.classList.add('show');
+  if(state.settings.sound) playSound(correct);
+  setTimeout(()=>overlay.classList.remove('show'),1200);
+}
+
+function playSound(correct){
+  try{const ctx=new(window.AudioContext||window.webkitAudioContext)();const o=ctx.createOscillator();const g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.value=correct?880:220;o.type=correct?'sine':'sawtooth';g.gain.setValueAtTime(0.3,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.4);o.start();o.stop(ctx.currentTime+0.4);if(correct){setTimeout(()=>{const o2=ctx.createOscillator();const g2=ctx.createGain();o2.connect(g2);g2.connect(ctx.destination);o2.frequency.value=1100;o2.type='sine';g2.gain.setValueAtTime(0.2,ctx.currentTime);g2.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.3);o2.start();o2.stop(ctx.currentTime+0.3);},150);}}catch(e){}
+}
+
+function speakQuestion(){if(!state.settings.tts||!window.speechSynthesis)return;const q=LEVELS[currentLevel].questions[currentQ];const utt=new SpeechSynthesisUtterance(q.text);utt.rate=0.85;utt.pitch=1.1;window.speechSynthesis.cancel();window.speechSynthesis.speak(utt);}
+
+function startTimer(){if(!state.settings.timer)return;timerVal=30;const el=document.getElementById('game-timer');const tv=document.getElementById('timer-val');el.style.display='flex';tv.textContent=timerVal;timerInterval=setInterval(()=>{timerVal--;tv.textContent=timerVal;if(timerVal<=0){stopTimer();handleTimeout();}},1000);}
+function stopTimer(){clearInterval(timerInterval);timerInterval=null;}
+function handleTimeout(){showFeedback(false,0);state.questionsAnswered++;setTimeout(nextQuestion,1400);}
+
+function toggleSetting(key){state.settings[key]=!state.settings[key];applySettings();saveState();}
+function changeFontSize(d){state.fontSize=Math.max(14,Math.min(26,state.fontSize+d));updateFontSize();saveState();}
+
+function spawnConfetti(){const colors=['#6C63FF','#FF6B9D','#FFD93D','#51CF66','#20C997','#FF922B'];for(let i=0;i<40;i++){setTimeout(()=>{const c=document.createElement('div');c.className='confetti';c.style.left=Math.random()*100+'vw';c.style.top='-20px';c.style.background=colors[Math.floor(Math.random()*colors.length)];c.style.animationDuration=(1+Math.random())+'s';document.body.appendChild(c);setTimeout(()=>c.remove(),2000);},i*40);}}
+
+function resetProgress(){if(!confirm('Reset all progress?'))return;localStorage.removeItem('neurolearn_state_v2');location.reload();}
+
+loadState(); renderHome();
+</script>
+</body>
+</html>
