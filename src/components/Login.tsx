@@ -1,21 +1,54 @@
+/**
+ * Login.tsx
+ * 
+ * FLOW:
+ * 1. User enters email + password
+ * 2. Firebase Auth validates credentials
+ * 3. On success, we fetch the user's Firestore document to read their
+ *    stored 'disabilityProfile' — this was set during onboarding detection
+ * 4. We use profileRoutes.ts to determine which page to redirect to
+ * 5. The user is seamlessly taken to their personalized learning page
+ *    (they never see which "disability page" they are on)
+ * 
+ * If no profile exists yet (e.g., old user), they are sent to /onboarding.
+ */
+
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { getRouteForProfile } from '../utils/profileRoutes';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
+
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      navigate('/dashboard');
+      // Step 1: Authenticate with Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+
+      // Step 2: Fetch the user's disability profile from Firestore
+      const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+      const userData = userDoc.data();
+      const disabilityProfile = userData?.disabilityProfile || null;
+
+      // Step 3: Route to the correct page based on their profile
+      // If no profile is set, getRouteForProfile returns '/onboarding'
+      const targetRoute = getRouteForProfile(disabilityProfile);
+      navigate(targetRoute);
     } catch (err: any) {
       setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -47,11 +80,41 @@ const Login: React.FC = () => {
               style={{ padding: '0.75rem', width: '100%' }}
             />
           </label>
-          <button type="submit" className="btn mt-4">Login</button>
+          <button type="submit" className="btn mt-4" disabled={loading}>
+            {loading ? 'Logging in...' : 'Login'}
+          </button>
         </form>
         <p className="mt-4 text-center">
           Don't have an account? <Link to="/register" style={{ color: 'var(--accent-color)' }}>Register here</Link>.
         </p>
+
+        {/*
+         * ─────────────────────────────────────────────
+         * TEMPORARY DIAGNOSTIC BUTTONS
+         * ─────────────────────────────────────────────
+         * In the future production version, these buttons will be removed.
+         * The user will ONLY use their Email/Password above. Once authenticated, 
+         * we read their `disabilityProfile` from Firestore (detected by the ML model 
+         * during /onboarding) and automatically navigate them to the correct 
+         * tailored learning interface without them ever needing to manually choose.
+         */}
+        <div className="mt-8 pt-6 border-t border-gray-200 w-full flex flex-col gap-2">
+          <p className="text-sm font-bold text-center text-gray-500 mb-2 uppercase tracking-wider">
+            Temporary Direct Routes
+          </p>
+          <button type="button" onClick={() => navigate('/learning-disability')} className="btn" style={{backgroundColor: '#4a5568'}}>
+            1. Learning Disability
+          </button>
+          <button type="button" onClick={() => navigate('/physical-disability')} className="btn" style={{backgroundColor: '#4a5568'}}>
+            2. Physical Disability
+          </button>
+          <button type="button" onClick={() => navigate('/visual-impairment')} className="btn" style={{backgroundColor: '#4a5568'}}>
+            3. Visual Impairment
+          </button>
+          <button type="button" onClick={() => navigate('/adhd-autism')} className="btn" style={{backgroundColor: '#2b6cb0'}}>
+            4. ADHD/AUTISM
+          </button>
+        </div>
       </div>
     </div>
   );
