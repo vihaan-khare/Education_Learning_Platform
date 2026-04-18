@@ -127,3 +127,38 @@ export async function updateLastActive(): Promise<void> {
     console.error('[ActivityService] Failed to update lastActive:', err);
   }
 }
+
+/**
+ * Save the serialized game state mapping to a user document
+ */
+export async function saveGameState(stateString: string, mode: string): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  try {
+    const fieldName = mode === 'adhd' ? 'gameStateADHD' : 'gameStateDyslexia';
+    await updateDoc(doc(db, 'users', user.uid), {
+      [fieldName]: stateString
+    });
+  } catch (err) {
+    console.error('[ActivityService] Failed to save game state:', err);
+  }
+}
+
+/**
+ * Fetch the serialized game state mapping from a user document
+ */
+export async function getGameState(mode: string): Promise<string | null> {
+  const user = auth.currentUser;
+  if (!user) return null;
+
+  try {
+    const userDoc = await getDoc(doc(db, 'users', user.uid));
+    const data = userDoc.data() || {};
+    const fieldName = mode === 'adhd' ? 'gameStateADHD' : 'gameStateDyslexia';
+    return typeof data[fieldName] === 'string' ? data[fieldName] : null;
+  } catch (err) {
+    console.error('[ActivityService] Failed to load game state:', err);
+    return null;
+  }
+}

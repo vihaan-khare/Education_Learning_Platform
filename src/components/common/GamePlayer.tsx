@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { auth, db } from '../../firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { logActivity } from '../../services/activityService';
+import { logActivity, saveGameState, getGameState } from '../../services/activityService';
 
 interface GamePlayerProps {
   mode: 'adhd' | 'dyslexia';
@@ -11,6 +11,7 @@ interface GamePlayerProps {
 
 const GamePlayer: React.FC<GamePlayerProps> = ({ mode, title, onBack }) => {
   const [playerName, setPlayerName] = useState<string>('');
+  const iframeRef = React.useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -32,8 +33,8 @@ const GamePlayer: React.FC<GamePlayerProps> = ({ mode, title, onBack }) => {
 
     fetchUser();
 
-    // Listen for level completion from the game iframe
-    const handleMessage = (event: MessageEvent) => {
+    // Listen for level completion and state sync from the game iframe
+    const handleMessage = async (event: MessageEvent) => {
       if (event.data?.type === 'LEARNING_ACTIVITY') {
         const { domain, level } = event.data;
         logActivity(
@@ -42,6 +43,20 @@ const GamePlayer: React.FC<GamePlayerProps> = ({ mode, title, onBack }) => {
           `Level ${level}`, 
           'lesson_complete'
         );
+      } else if (event.data?.type === 'SYNC_STATE') {
+        // Save the updated state to Firestore
+        if (event.data.gameState) {
+          saveGameState(event.data.gameState, mode);
+        }
+      } else if (event.data?.type === 'REQUEST_STATE') {
+        // Send the stored state back to the game engine
+        const storedState = await getGameState(mode);
+        if (storedState && iframeRef.current?.contentWindow) {
+          iframeRef.current.contentWindow.postMessage({
+            type: 'INIT_STATE',
+            gameState: storedState
+          }, '*');
+        }
       }
     };
 
@@ -62,6 +77,7 @@ const GamePlayer: React.FC<GamePlayerProps> = ({ mode, title, onBack }) => {
       </header>
 
       <iframe
+        ref={iframeRef}
         src={`/play.html?mode=${mode}${playerName ? `&player=${encodeURIComponent(playerName)}` : ''}`}
         style={styles.iframe}
         title="NeuroLearn Play"

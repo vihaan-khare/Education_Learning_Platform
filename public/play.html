@@ -642,12 +642,41 @@ let timerInterval=null, timerVal=30;
 let spellingWord='', spellingChosen=[];
 let sentenceChosen=[], sentenceWords=[];
 
+const urlParams = new URLSearchParams(window.location.search);
+const mode = urlParams.get('mode') || 'default';
+const urlPlayer = urlParams.get('player');
+
 function loadState() {
-  const s = localStorage.getItem('neurolearn_state_v2');
+  const s = localStorage.getItem(`neurolearn_state_v2_${mode}`);
   if (s) { const p=JSON.parse(s); state={...state,...p}; state.unlockedLevels=[true,true,true,true,true]; }
   applySettings(); updateFontSize();
 }
-function saveState() { localStorage.setItem('neurolearn_state_v2', JSON.stringify(state)); }
+function saveState() { 
+  localStorage.setItem(`neurolearn_state_v2_${mode}`, JSON.stringify(state)); 
+  if (window.parent) {
+    window.parent.postMessage({
+      type: 'SYNC_STATE',
+      gameState: JSON.stringify(state)
+    }, '*');
+  }
+}
+
+// Request initial state from React Parent (Firestore)
+if (window.parent) {
+  window.addEventListener('message', (event) => {
+    if (event.data?.type === 'INIT_STATE' && event.data.gameState) {
+      try {
+        const p = JSON.parse(event.data.gameState);
+        state = { ...state, ...p };
+        state.unlockedLevels = [true,true,true,true,true];
+        applySettings();
+        updateFontSize();
+        renderHome();
+      } catch (e) { console.error("Failed to parse initial state", e); }
+    }
+  });
+  window.parent.postMessage({ type: 'REQUEST_STATE' }, '*');
+}
 
 function applySettings() {
   document.body.classList.toggle('dark', !!state.settings.dark);
@@ -1080,9 +1109,8 @@ function resetProgress(){if(!confirm('Reset all progress?'))return;state.totalPo
 loadState();
 
 // --- ADHD/DYSLEXIA INTEGRATION ---
-const urlParams = new URLSearchParams(window.location.search);
-const mode = urlParams.get('mode');
-const urlPlayer = urlParams.get('player');
+// Mode is already defined at the top of the script
+
 
 if (urlPlayer && urlPlayer.trim() !== '') {
   state.player = decodeURIComponent(urlPlayer).trim();
