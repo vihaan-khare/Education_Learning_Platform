@@ -54,10 +54,7 @@
   .levels-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
 
   /* Special Learn-to-Write card spans full width */
-  .level-card.locked { opacity: 0.6; filter: grayscale(1); cursor: not-allowed !important; border-style: dashed !important; }
-  .level-card.locked .level-stars, .level-card.locked .level-progress { opacity: 0.3; }
-
-  .level-card-write { grid-column: 1 / -1; margin-bottom: 24px; cursor: pointer; }
+  .level-card-write { grid-column: 1 / -1; }
 
   .level-card {
     background: var(--card);
@@ -349,10 +346,8 @@
         ☕ <div><div style="font-weight:900;">Time for a short break!</div><div style="font-size:12px;">Rest for 2 min — you've been learning hard!</div></div>
         <button onclick="dismissBreak()" style="margin-left:auto;background:none;border:none;font-size:18px;cursor:pointer;">✕</button>
       </div>
-      <div class="section-title" id="levels-title">🗺️ Choose A Domain</div>
-      <button id="back-to-domains" class="back-btn" style="display:none; margin-bottom: 12px; background:var(--primary-light); color:var(--primary); font-size:14px;" onclick="showDomains()">← Back to Domains</button>
-      <div class="levels-grid" id="domains-grid"></div>
-      <div class="levels-grid" id="sublevels-grid" style="display:none;"></div>
+      <div class="section-title">🗺️ Choose Your Level</div>
+      <div class="levels-grid" id="levels-grid"></div>
       <div class="section-title">🏅 Top Scores</div>
       <div class="leaderboard-strip" id="lb-preview"></div>
     </div>
@@ -520,66 +515,43 @@
 </div>
 
 <script>
-
-const DOMAINS = [
-  { id:'alphabet', name:'Alphabet', icon:'🔤', color:'#6C63FF', desc:'Letters A-Z' },
-  { id:'numbers', name:'Numbers', icon:'🔢', color:'#FF922B', desc:'Count & Recognize' },
-  { id:'spelling', name:'Spelling', icon:'✏️', color:'#FF6B9D', desc:'Fill letters & spell' },
-  { id:'grammar', name:'Grammar', icon:'📚', color:'#20C997', desc:'Build sentences' },
-  { id:'reading', name:'Reading', icon:'📖', color:'#F4A261', desc:'Read & understand' },
+const LEVELS = [
+  { id:1, name:'Alphabet', icon:'🔤', color:'#6C63FF', desc:'Letters A-Z', questions:[
+    {type:'mcq',emoji:'🅰️',text:'Which letter comes after D?',hint:'Think of the alphabet song!',options:['C','E','B','F'],answer:'E',pts:10},
+    {type:'mcq',emoji:'🔡',text:'Which is the lowercase of B?',hint:'Same letter, smaller size',options:['d','b','p','q'],answer:'b',pts:10},
+    {type:'mcq',emoji:'🌟',text:'What letter does SUN start with?',hint:'Sound it out — S...S...SUN!',options:['U','N','S','A'],answer:'S',pts:10},
+    {type:'mcq',emoji:'🐕',text:'What letter does DOG start with?',hint:'D... Duh... Dog!',options:['B','G','D','P'],answer:'D',pts:10},
+    {type:'mcq',emoji:'🍎',text:'What letter does APPLE start with?',hint:'A is for...?',options:['P','E','O','A'],answer:'A',pts:10},
+  ]},
+  { id:2, name:'Numbers', icon:'🔢', color:'#FF922B', desc:'Count & Recognize', questions:[
+    {type:'mcq',emoji:'🍭🍭🍭',text:'How many candies? 🍭🍭🍭',hint:'Count one by one!',options:['2','4','3','5'],answer:'3',pts:10},
+    {type:'mcq',emoji:'🔢',text:'What number comes after 7?',hint:'7 then...?',options:['6','9','8','10'],answer:'8',pts:10},
+    {type:'mcq',emoji:'⭐⭐⭐⭐⭐',text:'Count the stars! ⭐⭐⭐⭐⭐',hint:'Point to each star!',options:['4','6','3','5'],answer:'5',pts:10},
+    {type:'mcq',emoji:'🐣',text:'What is 2 + 3?',hint:'Add on your fingers!',options:['4','6','5','7'],answer:'5',pts:15},
+    {type:'mcq',emoji:'🔢',text:'Which is the biggest number?',hint:'The largest!',options:['3','7','1','5'],answer:'7',pts:10},
+  ]},
+  { id:3, name:'Spelling', icon:'✏️', color:'#FF6B9D', desc:'Fill letters & spell', questions:[
+    {type:'spell',emoji:'🐱',text:'Spell the animal:',hint:'C _ T',word:'CAT',pts:20},
+    {type:'spell',emoji:'🐶',text:'Spell the animal:',hint:'D _ G',word:'DOG',pts:20},
+    {type:'spell',emoji:'☀️',text:'Spell this word:',hint:'S _ N',word:'SUN',pts:20},
+    {type:'spell',emoji:'🌈',text:'Spell this word:',hint:'R _ D',word:'RED',pts:20},
+    {type:'spell',emoji:'🐟',text:'Spell this word:',hint:'F _ S H',word:'FISH',pts:20},
+  ]},
+  { id:4, name:'Grammar', icon:'📚', color:'#20C997', desc:'Build sentences', questions:[
+    {type:'sentence',emoji:'🐱',text:'Arrange into a sentence:',words:['The','cat','is','fluffy'],answer:'The cat is fluffy',pts:25},
+    {type:'sentence',emoji:'🌞',text:'Arrange into a sentence:',words:['The','sun','is','bright'],answer:'The sun is bright',pts:25},
+    {type:'sentence',emoji:'🐶',text:'Arrange into a sentence:',words:['I','have','a','dog'],answer:'I have a dog',pts:25},
+    {type:'sentence',emoji:'📚',text:'Arrange into a sentence:',words:['She','reads','books'],answer:'She reads books',pts:25},
+    {type:'sentence',emoji:'⚽',text:'Arrange into a sentence:',words:['We','play','in','the','park'],answer:'We play in the park',pts:25},
+  ]},
+  { id:5, name:'Reading', icon:'📖', color:'#F4A261', desc:'Read & understand', questions:[
+    {type:'mcq',emoji:'📖',text:'"Tom has a red ball. He plays with it every day." — What color is the ball?',hint:'Look for the color word!',options:['Blue','Green','Red','Yellow'],answer:'Red',pts:30},
+    {type:'mcq',emoji:'🌧️',text:'"It is raining. Mia wears a coat." — Why does Mia wear a coat?',hint:'What does the text say?',options:['It is cold','It is raining','She likes coats','It is windy'],answer:'It is raining',pts:30},
+    {type:'mcq',emoji:'🐕',text:'"Ben has a dog named Max. Max loves to run." — What does Max love?',hint:'Read the last sentence!',options:['Sleep','Swim','Run','Jump'],answer:'Run',pts:30},
+    {type:'mcq',emoji:'🍎',text:'"Ana eats an apple every morning." — When does Ana eat?',hint:'Look for the time word!',options:['At night','Afternoon','Every morning','At lunch'],answer:'Every morning',pts:30},
+    {type:'mcq',emoji:'🌟',text:'"Sam works hard at school. He gets a gold star." — Why does Sam get a star?',hint:'What did Sam do?',options:['He sleeps a lot','He works hard','He is tall','He is funny'],answer:'He works hard',pts:30},
+  ]},
 ];
-
-function rItem(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
-function rLet() { return String.fromCharCode(65+Math.floor(Math.random()*26)); }
-function rNum(max) { return Math.floor(Math.random()*(max-1))+1; }
-
-function generateQuestions(domain, lvl) {
-  let qs = [];
-  for(let i=0; i<5; i++) {
-    if(domain==='alphabet') {
-      let l = String.fromCharCode(65+Math.floor(Math.random()*25));
-      let nextL = String.fromCharCode(l.charCodeAt(0)+1);
-      qs.push({type:'mcq', emoji:'🅰️', text:`Which letter comes after ${l}?`, options:[nextL, rLet(), rLet(), rLet()].sort(()=>Math.random()-0.5), answer:nextL, pts:10});
-    } else if(domain==='numbers') {
-      let a=rNum(lvl*2)+1, b=rNum(lvl*2)+1;
-      let ans = (a+b).toString();
-      qs.push({type:'mcq', emoji:'🔢', text:`What is ${a} + ${b}?`, options:[ans, (a+b+1).toString(), (a+b-1).toString(), (a+b+2).toString()].sort(()=>Math.random()-0.5), answer:ans, pts:10});
-    } else if(domain==='spelling') {
-      let words = ['CAT','DOG','SUN','RED','FISH','BIRD','TREE','BOOK','MOON','STAR','FROG','DUCK','BEAR','LION','TIGER','APPLE','GRAPE','LEMON','WATER','BREAD'];
-      qs.push({type:'spell', emoji:'✏️', text:'Spell the word:', word:rItem(words), pts:20});
-    } else if(domain==='grammar') {
-      let sents = [['The','cat','is','fluffy'],['The','sun','is','bright'],['I','have','a','dog'],['She','reads','books'],['We','play','in','the','park'],['Birds','fly','in','the','sky'],['Fish','swim','in','water'],['He','likes','to','run'],['They','jump','high'],['The','sky','is','blue']];
-      let s = rItem(sents);
-      qs.push({type:'sentence', emoji:'📚', text:'Arrange into a sentence:', words:s, answer:s.join(' '), pts:25});
-    } else if(domain==='reading') {
-      let banks = [
-        {text:'Tom has a red ball. He plays with it every day.', q:'What color is the ball?', a:'Red', o:['Blue','Green','Red','Yellow']},
-        {text:'It is raining. Mia wears a coat.', q:'Why does Mia wear a coat?', a:'It is raining', o:['It is cold','It is raining','She likes coats','It is windy']},
-        {text:'Ben has a dog named Max. Max loves to run.', q:'What does Max love?', a:'Run', o:['Sleep','Swim','Run','Jump']},
-        {text:'Ana eats an apple every morning.', q:'When does Ana eat?', a:'Every morning', o:['At night','Afternoon','Every morning','At lunch']},
-        {text:'Sam works hard at school. He gets a gold star.', q:'Why does Sam get a star?', a:'He works hard', o:['He sleeps a lot','He works hard','He is tall','He is funny']}
-      ];
-      let r = rItem(banks);
-      qs.push({type:'mcq', emoji:'📖', text:`"${r.text}" — ${r.q}`, options:r.o.sort(()=>Math.random()-0.5), answer:r.a, pts:30});
-    }
-  }
-  return qs;
-}
-
-function generateDomainLevels(domainId) {
-  let levels = [];
-  const TOTAL_LEVELS = 15;
-  for(let i=1; i<=TOTAL_LEVELS; i++) {
-    levels.push({
-      id: `${domainId}_${i}`,
-      name: `Level ${i}`,
-      desc: `Stage ${i}`,
-      questions: generateQuestions(domainId, i)
-    });
-  }
-  return levels;
-}
-
 
 const LETTER_DATA = {
   A:{word:'🍎 Apple',sounds:'ay',stroke:'1. Start at top center\n2. Stroke down-left\n3. Stroke down-right\n4. Draw crossbar in middle'},
@@ -630,14 +602,14 @@ let currentLetterIndex = 0;
 
 let state = {
   player:'', totalPoints:0, badges:0,
-  levelProgress:{}, levelStars:{},
+  levelProgress:[0,0,0,0,0], levelStars:[0,0,0,0,0],
   unlockedLevels:[true,true,true,true,true],
   leaderboard:[],
   settings:{sound:true,tts:true,timer:true,focus:false,breaks:true,dark:false},
   fontSize:18, questionsAnswered:0,
 };
 
-let currentDomain=null, currentDomainLevels=[], currentLevel=0, currentQ=0, sessionPts=0;
+let currentLevel=0, currentQ=0, sessionPts=0;
 let timerInterval=null, timerVal=30;
 let spellingWord='', spellingChosen=[];
 let sentenceChosen=[], sentenceWords=[];
@@ -799,27 +771,11 @@ function renderHome() {
 }
 function dismissBreak() { document.getElementById('break-banner').style.display='none'; }
 
-
 function renderLevels() {
-  // If a domain is selected, show its sub-levels
-  if (currentDomain) {
-    document.getElementById('domains-grid').style.display = 'none';
-    document.getElementById('sublevels-grid').style.display = 'grid';
-    document.getElementById('back-to-domains').style.display = 'inline-block';
-    document.getElementById('levels-title').textContent = `🗺️ ${currentDomain.name} Levels`;
-    renderSubLevels();
-    return;
-  }
-
-  // Otherwise, show the domains
-  document.getElementById('domains-grid').style.display = 'grid';
-  document.getElementById('sublevels-grid').style.display = 'none';
-  document.getElementById('back-to-domains').style.display = 'none';
-  document.getElementById('levels-title').textContent = '🗺️ Choose A Domain';
-
-  const grid=document.getElementById('domains-grid');
+  const grid=document.getElementById('levels-grid');
   grid.innerHTML='';
 
+  // Special Write card — full width
   const writeCard=document.createElement('div');
   writeCard.className='level-card-write';
   writeCard.innerHTML=`
@@ -834,67 +790,18 @@ function renderLevels() {
     </div>`;
   grid.appendChild(writeCard);
 
-  DOMAINS.forEach((dom)=>{
-    // Calculate total domain progress (average)
-    let totalStars = 0, totalProg = 0;
-    for(let i=1; i<=15; i++) {
-       totalStars += (state.levelStars[`${dom.id}_${i}`] || 0);
-       totalProg += (state.levelProgress[`${dom.id}_${i}`] || 0);
-    }
-    const maxStars = 15 * 3;
-    const maxProg = 15 * 100;
-    const progress = maxProg > 0 ? (totalProg / maxProg) * 100 : 0;
-    
+  LEVELS.forEach((lvl,i)=>{
+    const stars=state.levelStars[i]||0;
+    const progress=state.levelProgress[i]||0;
     const card=document.createElement('div');
-    card.className=`level-card`;
-    card.style.borderColor = dom.color;
+    card.className=`level-card lvl-${i+1}`;
     card.innerHTML=`
-      <div class="level-icon">${dom.icon}</div>
-      <div class="level-name">${dom.name}</div>
-      <div class="level-sub">${dom.desc}</div>
-      <div style="font-size:12px; font-weight:bold; color:var(--text-muted); margin-top:8px;">${totalStars}/${maxStars} ⭐</div>
-      <div class="level-progress"><div class="level-progress-fill" style="width:${progress}%; background:${dom.color}"></div></div>`;
-    card.onclick=()=> {
-      currentDomain = dom;
-      currentDomainLevels = generateDomainLevels(dom.id);
-      renderLevels();
-    };
-    grid.appendChild(card);
-  });
-}
-
-function showDomains() {
-  currentDomain = null;
-  renderLevels();
-}
-
-function renderSubLevels() {
-  const grid=document.getElementById('sublevels-grid');
-  grid.innerHTML='';
-  
-  currentDomainLevels.forEach((lvl,i)=>{
-    const stars=state.levelStars[lvl.id]||0;
-    const progress=state.levelProgress[lvl.id]||0;
-
-    // Locking logic: First level is open, others open only if previous is 100% complete
-    let isLocked = false;
-    if (i > 0) {
-      const prevLvlId = currentDomainLevels[i-1].id;
-      if ((state.levelProgress[prevLvlId] || 0) < 100) isLocked = true;
-    }
-
-    const card=document.createElement('div');
-    card.className=`level-card lvl-${(i%5)+1} ${isLocked ? 'locked' : ''}`;
-    if(!isLocked) card.style.borderColor = currentDomain.color;
-
-    card.innerHTML=`
-      <div class="level-icon">${isLocked ? '🔒' : currentDomain.icon}</div>
+      <div class="level-icon">${lvl.icon}</div>
       <div class="level-name">${lvl.name}</div>
-      <div class="level-sub">${isLocked ? 'Complete previous level to unlock' : lvl.desc}</div>
+      <div class="level-sub">${lvl.desc}</div>
       <div class="level-stars">${'⭐'.repeat(stars)}${'☆'.repeat(3-stars)}</div>
       <div class="level-progress"><div class="level-progress-fill" style="width:${progress}%"></div></div>`;
-    
-    if(!isLocked) card.onclick=()=>startLevel(i);
+    card.onclick=()=>startLevel(i);
     grid.appendChild(card);
   });
 }
@@ -922,13 +829,13 @@ function renderLeaderboard() {
   const sorted=sortLB([...state.leaderboard]);
   if(!sorted.length){el.innerHTML='<div style="text-align:center;color:var(--text-muted);padding:32px;font-weight:700;">🏆 No scores yet!</div>';return;}
   const medals=['gold','silver','bronze'];
-  el.innerHTML=sorted.map((e,i)=>`<div class="lb-row"><div class="lb-rank ${medals[i]||'other'}">${i+1}</div><div><div class="lb-name">${e.name}</div><div style="font-size:12px;color:var(--text-muted);font-weight:600;">${e.level.replace('_', ' Level ')} · ${e.date}</div></div><div class="lb-pts">⭐ ${e.pts}</div></div>`).join('');
+  el.innerHTML=sorted.map((e,i)=>`<div class="lb-row"><div class="lb-rank ${medals[i]||'other'}">${i+1}</div><div><div class="lb-name">${e.name}</div><div style="font-size:12px;color:var(--text-muted);font-weight:600;">Level ${e.level} · ${e.date}</div></div><div class="lb-pts">⭐ ${e.pts}</div></div>`).join('');
 }
 
-function startLevel(idx) { currentLevel=idx; currentQ=0; sessionPts=0; showScreen('game'); document.getElementById('game-title').textContent=`${currentDomain.name} - Level ${idx+1}`; renderQuestion(); }
+function startLevel(idx) { currentLevel=idx; currentQ=0; sessionPts=0; showScreen('game'); document.getElementById('game-title').textContent=`Level ${idx+1}: ${LEVELS[idx].name}`; renderQuestion(); }
 
 function renderQuestion() {
-  const lvl=currentDomainLevels[currentLevel]; const q=lvl.questions[currentQ]; const total=lvl.questions.length;
+  const lvl=LEVELS[currentLevel]; const q=lvl.questions[currentQ]; const total=lvl.questions.length;
   document.getElementById('q-progress').style.width=((currentQ/total)*100)+'%';
   document.getElementById('q-count').textContent=`Q ${currentQ+1} of ${total}`;
   document.getElementById('q-pts').textContent=sessionPts+' pts';
@@ -1001,30 +908,30 @@ function removeWord(i){const r=sentenceChosen.splice(i,1)[0];document.getElement
 function clearSentence(){sentenceChosen.forEach(c=>document.getElementById(c.btnId).classList.remove('used'));sentenceChosen=[];updateSentenceTarget();}
 function checkSentence(answer,pts){const attempt=sentenceChosen.map(c=>c.word).join(' ');stopTimer();if(attempt===answer){let bonus=state.settings.timer&&timerVal>20?12:0;awardPoints(pts+bonus,true);}else{showFeedback(false,0);document.getElementById('sent-target').innerHTML=`<div style="color:var(--green);font-weight:800;font-size:16px;">✅ ${answer}</div>`;}state.questionsAnswered++;setTimeout(nextQuestion,2000);}
 
-function nextQuestion(){currentQ++;if(currentQ>=currentDomainLevels[currentLevel].questions.length)completeLevel();else renderQuestion();}
+function nextQuestion(){currentQ++;if(currentQ>=LEVELS[currentLevel].questions.length)completeLevel();else renderQuestion();}
 
 function completeLevel(){
-  const lvl=currentDomainLevels[currentLevel];
+  const lvl=LEVELS[currentLevel];
   const maxPts=lvl.questions.reduce((a,q)=>a+q.pts,0)+(state.settings.timer?50:0);
   const pct=sessionPts/maxPts;
   const stars=pct>=0.8?3:pct>=0.5?2:1;
-  state.levelStars[lvl.id]=Math.max(state.levelStars[lvl.id]||0,stars);
-  state.levelProgress[lvl.id]=100;
+  state.levelStars[currentLevel]=Math.max(state.levelStars[currentLevel]||0,stars);
+  state.levelProgress[currentLevel]=100;
   state.totalPoints+=sessionPts;
   state.badges+=stars;
   const pName = state.player.toLowerCase().trim();
-  const existingEntries = state.leaderboard.filter(e => e.name.toLowerCase().trim() === pName && e.level === lvl.id);
+  const existingEntries = state.leaderboard.filter(e => e.name.toLowerCase().trim() === pName && e.level === currentLevel + 1);
   let maxExistingPts = 0;
   if(existingEntries.length > 0) {
     maxExistingPts = Math.max(...existingEntries.map(e => e.pts));
   }
   
   // Remove all duplicates for this user/level to clean up legacy data
-  state.leaderboard = state.leaderboard.filter(e => !(e.name.toLowerCase().trim() === pName && e.level === lvl.id));
+  state.leaderboard = state.leaderboard.filter(e => !(e.name.toLowerCase().trim() === pName && e.level === currentLevel + 1));
   
   // Keep the absolute highest score
   const finalPts = Math.max(sessionPts, maxExistingPts);
-  state.leaderboard.push({name:state.player, pts:finalPts, level:lvl.id, date:new Date().toLocaleDateString()});
+  state.leaderboard.push({name:state.player, pts:finalPts, level:currentLevel+1, date:new Date().toLocaleDateString()});
 
   if(state.leaderboard.length>20) { sortLB(state.leaderboard); state.leaderboard.length=20; }
   saveState(); spawnConfetti();
@@ -1053,7 +960,7 @@ function playSound(correct){
   try{const ctx=new(window.AudioContext||window.webkitAudioContext)();const o=ctx.createOscillator();const g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.value=correct?880:220;o.type=correct?'sine':'sawtooth';g.gain.setValueAtTime(0.3,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.4);o.start();o.stop(ctx.currentTime+0.4);if(correct){setTimeout(()=>{const o2=ctx.createOscillator();const g2=ctx.createGain();o2.connect(g2);g2.connect(ctx.destination);o2.frequency.value=1100;o2.type='sine';g2.gain.setValueAtTime(0.2,ctx.currentTime);g2.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.3);o2.start();o2.stop(ctx.currentTime+0.3);},150);}}catch(e){}
 }
 
-function speakQuestion(){if(!state.settings.tts||!window.speechSynthesis)return;const q=currentDomainLevels[currentLevel].questions[currentQ];const utt=new SpeechSynthesisUtterance(q.text);utt.rate=0.85;utt.pitch=1.1;window.speechSynthesis.cancel();window.speechSynthesis.speak(utt);}
+function speakQuestion(){if(!state.settings.tts||!window.speechSynthesis)return;const q=LEVELS[currentLevel].questions[currentQ];const utt=new SpeechSynthesisUtterance(q.text);utt.rate=0.85;utt.pitch=1.1;window.speechSynthesis.cancel();window.speechSynthesis.speak(utt);}
 
 function startTimer(){if(!state.settings.timer)return;timerVal=30;const el=document.getElementById('game-timer');const tv=document.getElementById('timer-val');el.style.display='flex';tv.textContent=timerVal;timerInterval=setInterval(()=>{timerVal--;tv.textContent=timerVal;if(timerVal<=0){stopTimer();handleTimeout();}},1000);}
 function stopTimer(){clearInterval(timerInterval);timerInterval=null;}
@@ -1064,7 +971,7 @@ function changeFontSize(d){state.fontSize=Math.max(14,Math.min(26,state.fontSize
 
 function spawnConfetti(){const colors=['#6C63FF','#FF6B9D','#FFD93D','#51CF66','#20C997','#FF922B'];for(let i=0;i<40;i++){setTimeout(()=>{const c=document.createElement('div');c.className='confetti';c.style.left=Math.random()*100+'vw';c.style.top='-20px';c.style.background=colors[Math.floor(Math.random()*colors.length)];c.style.animationDuration=(1+Math.random())+'s';document.body.appendChild(c);setTimeout(()=>c.remove(),2000);},i*40);}}
 
-function resetProgress(){if(!confirm('Reset all progress?'))return;state.totalPoints=0;state.badges=0;state.levelProgress={};state.levelStars={};state.questionsAnswered=0;saveState();location.reload();}
+function resetProgress(){if(!confirm('Reset all progress?'))return;state.totalPoints=0;state.badges=0;state.levelProgress=[0,0,0,0,0];state.levelStars=[0,0,0,0,0];state.questionsAnswered=0;saveState();location.reload();}
 
 loadState();
 

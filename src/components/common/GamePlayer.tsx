@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { auth, db } from '../../firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 interface GamePlayerProps {
   mode: 'adhd' | 'dyslexia';
@@ -7,6 +9,28 @@ interface GamePlayerProps {
 }
 
 const GamePlayer: React.FC<GamePlayerProps> = ({ mode, title, onBack }) => {
+  const [playerName, setPlayerName] = useState<string>('');
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const user = auth.currentUser;
+      if (user) {
+        try {
+          const docRef = doc(db, 'users', user.uid);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists() && docSnap.data().name) {
+            setPlayerName(docSnap.data().name);
+          } else {
+            setPlayerName(user.displayName || user.email?.split('@')[0] || 'Player');
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    };
+    fetchUser();
+  }, []);
+
   return (
     <div style={styles.container}>
       <header style={styles.header}>
@@ -20,7 +44,7 @@ const GamePlayer: React.FC<GamePlayerProps> = ({ mode, title, onBack }) => {
       </header>
 
       <iframe
-        src={`/play.html?mode=${mode}`}
+        src={`/play.html?mode=${mode}${playerName ? `&player=${encodeURIComponent(playerName)}` : ''}`}
         style={styles.iframe}
         title="NeuroLearn Play"
         frameBorder="0"
