@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Inclusive Learning Platform</title>
+    
+    <!-- Stitch Design System Fonts and Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;900&family=Manrope:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    
+    <!-- Tailwind via CDN for Stitch output -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-error": "#490006",
+                    "tertiary-dim": "#874cff",
+                    "inverse-on-surface": "#52555c",
+                    "on-secondary-fixed": "#5b0074",
+                    "on-error-container": "#ffa8a3",
+                    "on-primary": "#005d63",
+                    "primary-fixed-dim": "#00deec",
+                    "inverse-primary": "#006a71",
+                    "surface": "#0b0e14",
+                    "surface-bright": "#282c36",
+                    "error": "#ff716c",
+                    "on-primary-container": "#005359",
+                    "surface-variant": "#22262f",
+                    "on-tertiary-fixed": "#1f0052",
+                    "on-surface-variant": "#a9abb3",
+                    "surface-container": "#161a21",
+                    "background": "#0b0e14",
+                    "surface-container-high": "#1c2028",
+                    "on-secondary": "#3b004c",
+                    "error-dim": "#d7383b",
+                    "tertiary-fixed": "#bda1ff",
+                    "on-background": "#ecedf6",
+                    "surface-dim": "#0b0e14",
+                    "outline": "#73757d",
+                    "on-surface": "#ecedf6",
+                    "primary-container": "#00eefc",
+                    "outline-variant": "#45484f",
+                    "surface-container-highest": "#22262f",
+                    "surface-tint": "#8ff5ff",
+                    "on-secondary-fixed-variant": "#8700ab",
+                    "secondary-dim": "#be14ee",
+                    "on-tertiary-container": "#f8f1ff",
+                    "tertiary": "#ac89ff",
+                    "secondary-container": "#9d00c6",
+                    "on-tertiary-fixed-variant": "#4700a7",
+                    "primary-fixed": "#00eefc",
+                    "surface-container-low": "#10131a",
+                    "on-tertiary": "#290067",
+                    "on-primary-fixed": "#003f43",
+                    "primary": "#8ff5ff",
+                    "on-primary-fixed-variant": "#005e64",
+                    "error-container": "#9f0519",
+                    "secondary-fixed": "#f5bfff",
+                    "surface-container-lowest": "#000000",
+                    "secondary": "#df6eff",
+                    "tertiary-fixed-dim": "#b190ff",
+                    "inverse-surface": "#f9f9ff",
+                    "tertiary-container": "#7000ff",
+                    "primary-dim": "#00deec",
+                    "on-secondary-container": "#fff5fb",
+                    "secondary-fixed-dim": "#f0abff"
+            },
+            "fontFamily": {
+                    "headline": ["Space Grotesk"],
+                    "body": ["Manrope"],
+                    "label": ["Space Grotesk"]
+            }
+          },
+        },
+      }
+    </script>
+    <style>
+      .material-symbols-outlined {
+          font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .scanning-line {
+          height: 2px;
+          background: linear-gradient(90deg, transparent, #8ff5ff, transparent);
+          box-shadow: 0 0 15px #8ff5ff;
+          position: absolute;
+          width: 100%;
+          top: 50%;
+          left: 0;
+          z-index: 20;
+          animation: scan 3s ease-in-out infinite;
+      }
+      @keyframes scan {
+          0% { top: 0%; opacity: 0; }
+          10% { opacity: 1; }
+          90% { opacity: 1; }
+          100% { top: 100%; opacity: 0; }
+      }
+      .glass-panel {
+          background: rgba(34, 38, 47, 0.4);
+          backdrop-filter: blur(20px);
+          border: 0.5px solid rgba(69, 72, 79, 0.2);
+      }
+      .intelligence-gradient {
+          background: linear-gradient(45deg, #8ff5ff, #df6eff);
+      }
+      .glow-soft {
+          box-shadow: 0 0 32px rgba(143, 245, 255, 0.1);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
