@@ -36,15 +36,8 @@ const Login: React.FC = () => {
       // Step 1: Authenticate with Firebase
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
-      // Step 2: Fetch the user's disability profile from Firestore
-      const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
-      const userData = userDoc.data();
-      const disabilityProfile = userData?.disabilityProfile || null;
-
-      // Step 3: Route to the correct page based on their profile
-      // If no profile is set, getRouteForProfile returns '/onboarding'
-      const targetRoute = getRouteForProfile(disabilityProfile);
-      navigate(targetRoute);
+      // Step 2: Go to the student home dashboard
+      navigate('/home');
     } catch (err: any) {
       setError(err.message);
     } finally {

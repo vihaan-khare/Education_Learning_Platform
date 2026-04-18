@@ -30,12 +30,14 @@ import CoursePlayer from './components/CoursePlayer';
 import AccessibilityFAB from './components/AccessibilityFAB';
 import Login from './components/Login';
 import Register from './components/Register';
+import HomePage from './components/HomePage';
 
 // Disability-specific pages (user doesn't know which one they are on)
 import LearningDisability from './components/pages/LearningDisability';
 import PhysicalDisability from './components/pages/PhysicalDisability';
 import VisualImpairment from './components/pages/VisualImpairment';
-import AdhdAutism from './components/pages/AdhdAutism';
+import AdhdPage from './components/adhd/AdhdPage';
+import AutismPage from './components/adhd/AutismPage';
 
 function App() {
   return (
@@ -50,11 +52,15 @@ function App() {
           {/* AI detection/onboarding — saves profile to Firestore */}
           <Route path="/onboarding" element={<Onboarding />} />
 
+          {/* Student Home Dashboard */}
+          <Route path="/home" element={<HomePage />} />
+
           {/* Disability-specific pages — routed automatically after login */}
           <Route path="/learning-disability" element={<LearningDisability />} />
           <Route path="/physical-disability" element={<PhysicalDisability />} />
           <Route path="/visual-impairment" element={<VisualImpairment />} />
-          <Route path="/adhd-autism" element={<AdhdAutism />} />
+          <Route path="/adhd" element={<AdhdPage onBack={() => window.location.href = '/home'} />} />
+          <Route path="/autism" element={<AutismPage onBack={() => window.location.href = '/home'} />} />
 
           {/* Legacy routes */}
           <Route path="/dashboard" element={<Dashboard />} />

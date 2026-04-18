@@ -30,8 +30,9 @@ export function getRouteForProfile(profile: string | null | undefined): string {
     case 'visual':
       return '/visual-impairment';
     case 'adhd':
+      return '/adhd';
     case 'autism':
-      return '/adhd-autism';
+      return '/autism';
     default:
       // If no profile has been set yet, send them to onboarding/detection
       return '/onboarding';

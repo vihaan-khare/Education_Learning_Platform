@@ -1,0 +1,40 @@
+TECH STACK EXPLAINED
+====================
+
+This document explains the "How" and "Why" behind the technology used in this platform.
+
+1. THE BUILDING BLOCKS (Frontend)
+---------------------------------
+* FRAMEWORK: React 19
+  - Why? It lets us build "reusable pieces" of UI. For students with Autism, consistency is key, and React makes it easy to ensure every button and card behaves the same way everywhere.
+* BUILD TOOL: Vite
+  - Why? Speed. When developers make a change to a button or a color, it updates in the browser instantly (less than 100ms). This allowed us to perfect the "Focus Mode" without wasting time waiting for the app to reload.
+
+2. THE BRAINS (AI & LLMs)
+-------------------------
+* AI MODEL: Google Gemini 2.0 Flash
+  - Why? For neurodivergent users, "Waiting" = "Anxiety." Gemini Flash is the fastest model available. It responds almost instantly, so the student doesn't get distracted while waiting for the AI to clarify a task.
+* INSTRUCTION CLARIFIER:
+  - What it does: It takes "messy" or "scary" paragraphs of text and turns them into a simple, clear checklist.
+* EXPECTATION SETTING:
+  - What it does: AI "glances" at the next lesson for you. It tells you exactly how long it will take and what you need to do, which stops the "fear of the unknown" before it starts.
+
+3. PRIVACY FIRST (Onboarding)
+-----------------------------
+* AI DETECTION: TensorFlow.js
+  - Why? Most AI sends your voice or video to a server in the cloud. We don't do that.
+  - How? TensorFlow.js lets the AI run "locally" on your computer. Your face/video never leaves your device—it's private by design.
+
+4. SPECIAL "CALM" TOOLS
+-----------------------
+* FOCUS MODE:
+  - Technical Detail: A "one-click" switch that narrows the screen and changes colors to soft, warm tones. This reduces glare and sensory overload.
+* PROGRESS MAPPING:
+  - Technical Detail: Instead of just saying "Not Done," we calculate exactly how many steps are left. Seeing "Step 3 of 5" gives the user a visible "finish line" which lowers stress.
+
+5. DATA & SYNCING
+-----------------
+* DATABASE: Firebase
+  - Why? It's like a real-time hard drive. If a student finishes a task on their phone, it shows up as "Done" on their computer instantly.
+* STYLING: Vanilla CSS
+  - Why? We didn't use generic templates. Every pixel is custom-coded to ensure the spacing and colors are perfect for accessibility.

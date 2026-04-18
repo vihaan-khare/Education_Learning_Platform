@@ -1028,6 +1028,17 @@ function completeLevel(){
 
   if(state.leaderboard.length>20) { sortLB(state.leaderboard); state.leaderboard.length=20; }
   saveState(); spawnConfetti();
+
+  // Notify parent (React) to log activity
+  if (window.parent) {
+    window.parent.postMessage({
+      type: 'LEARNING_ACTIVITY',
+      domain: currentDomain.name,
+      level: currentLevel + 1,
+      pts: sessionPts
+    }, '*');
+  }
+
   document.getElementById('complete-badge').textContent=['🥉','🥈','🥇'][stars-1];
   document.getElementById('complete-title').textContent=stars===3?'Perfect! Outstanding! 🎊':stars===2?'Great Work! 🎉':'Good Effort! 👍';
   document.getElementById('complete-stars').textContent='⭐'.repeat(stars)+'☆'.repeat(3-stars);

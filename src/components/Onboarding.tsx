@@ -13,6 +13,7 @@ const Onboarding: React.FC = () => {
   const [messages, setMessages] = useState<{sender: 'ai' | 'user', text: string}[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [userInput, setUserInput] = useState('');
+  const [pendingProfile, setPendingProfile] = useState<string | null>(null);
 
   // Helper to make the AI speak
   const speakMessage = (text: string, onEnd?: () => void) => {
@@ -63,50 +64,223 @@ const Onboarding: React.FC = () => {
     if (typeof overrideText !== 'string') {
       setUserInput('');
     }
-    setIsTyping(true);
     
-    // Check if user agreed or explicitly stated a profile
-    const inputLower = currentInput.toLowerCase();
-    const isBlind = inputLower.includes('blind') || inputLower.includes('visual');
-    const isADHD = inputLower.includes('adhd') || inputLower.includes('focus');
-    const isAutism = inputLower.includes('autism') || inputLower.includes('sensory');
-    
-    let profileToApply: 'visual' | 'learning' | 'adhd' | 'autism' = 'learning';
-    let responseMsg = "Applying the standard learning profile now. Stand by...";
-
-    if (isBlind) {
-      profileToApply = 'visual';
-      responseMsg = "Understood. Applying High Contrast mode and Text-to-Speech support. Stand by...";
-    } else if (isADHD) {
-      profileToApply = 'adhd';
-      responseMsg = "Got it. Applying the Sensory Focus profile to reduce distractions. Stand by...";
-    } else if (isAutism) {
-      profileToApply = 'autism';
-      responseMsg = "Got it. Applying the low-stimulation Sensory Profile. Stand by...";
+    if (pendingProfile) {
+      if (currentInput.toLowerCase().match(/\b(yes|yeah|sure|ok|okay|yep|y)\b/)) {
+        addAiMessage("Great! Taking you there now...");
+        setTimeout(async () => {
+          applyProfileSettings(pendingProfile as any);
+          if (auth.currentUser) {
+            try {
+              await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+                disabilityProfile: pendingProfile
+              });
+            } catch (error) {
+              console.error("Failed to save profile to Firestore", error);
+            }
+          }
+          navigate(getRouteForProfile(pendingProfile));
+        }, 2000);
+        setPendingProfile(null);
+      } else {
+        addAiMessage("I'm sorry if I misunderstood! Could you provide a bit more detail about what you struggle with or what accommodations you need?");
+        setPendingProfile(null);
+      }
+      return;
     }
 
-    setTimeout(async () => {
-      setIsTyping(false);
-      addAiMessage(responseMsg);
+    setIsTyping(true);
+
+    // Use Gemini LLM to classify the user's disability from natural language
+    const classifyWithLLM = async (): Promise<{ profile: 'visual' | 'learning' | 'adhd' | 'autism' | 'physical', response: string }> => {
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
       
-      setTimeout(async () => {
-        applyProfileSettings(profileToApply);
+      if (apiKey && apiKey !== 'your-gemini-api-key') {
+        try {
+          const prompt = `Classify into ONE: visual,adhd,autism,learning,physical.
+Input:"${currentInput.slice(0, 150)}"
+Reply JSON only:{"profile":"...","response":"one sentence"}`;
 
-        // Save to Firestore if user is logged in
-        if (auth.currentUser) {
-          try {
-            await updateDoc(doc(db, 'users', auth.currentUser.uid), {
-              disabilityProfile: profileToApply
-            });
-          } catch (error) {
-            console.error("Failed to save profile to Firestore", error);
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (raw) {
+              const cleaned = raw.replace(/```json|```/g, '').trim();
+              const parsed = JSON.parse(cleaned);
+              const validProfiles = ['visual', 'learning', 'adhd', 'autism', 'physical'];
+              if (validProfiles.includes(parsed.profile)) {
+                return { profile: parsed.profile, response: parsed.response };
+              }
+            }
           }
+        } catch (err) {
+          console.warn('[Aurora] LLM classification failed, falling back to keyword match:', err);
         }
+      }
 
-        const nextRoute = getRouteForProfile(profileToApply);
-        navigate(nextRoute);
-      }, 5000); // Wait for the TTS
-    }, 1500);
+      // ── FOOLPROOF KEYWORD FALLBACK ──
+      // Runs when LLM is unavailable. Pure in-memory string matching, zero performance impact.
+      const inputLower = currentInput.toLowerCase();
+
+      const visualWords = [
+        'blind', 'visual', 'vision', 'eye', 'sight', 'screen reader',
+        'can\'t see', 'cant see', 'cannot see', 'hard to see', 'trouble seeing',
+        'low vision', 'partially sighted', 'visually impaired', 'blurry', 'blur',
+        'magnifier', 'magnification', 'zoom', 'contrast', 'dark mode',
+        'braille', 'cane', 'guide dog', 'retina', 'glaucoma', 'cataract',
+        'macular', 'color blind', 'colour blind', 'colorblind', 'colourblind',
+        'light sensitive', 'photophobic', 'squint', 'strain my eyes',
+        'everything is dark', 'can barely see', 'losing my sight', 'lost my sight',
+        'optic', 'cornea', 'lens implant', 'eye surgery', 'eye condition',
+        'screen too bright', 'font too small', 'text too small', 'enlarge',
+        'high contrast', 'inverted colors', 'inverted colours', 'tts', 'text to speech',
+        'voiceover', 'jaws', 'nvda', 'narrator', 'talkback',
+      ];
+
+      const adhdWords = [
+        'adhd', 'add', 'distract', 'attention', 'concentrate', 'concentration',
+        'hyperactiv', 'impulsiv', 'can\'t focus', 'cant focus', 'cannot focus',
+        'hard to focus', 'trouble focusing', 'lose focus', 'losing focus',
+        'mind wander', 'wandering mind', 'zoning out', 'zone out', 'zoned out',
+        'fidget', 'restless', 'sit still', 'can\'t sit', 'cant sit',
+        'forgetful', 'forget things', 'keep forgetting', 'memory issues',
+        'procrastinat', 'putting off', 'put things off', 'last minute',
+        'time management', 'manage time', 'losing track', 'track of time',
+        'easily bored', 'get bored', 'boring', 'need stimulation',
+        'too many tabs', 'overwhelmed by tasks', 'task switching', 'multitask',
+        'scattered', 'disorganiz', 'disorganis', 'messy', 'chaotic',
+        'executive function', 'working memory', 'short attention',
+        'daydream', 'spacing out', 'spaced out', 'inattentive', 'inattention',
+        'hyperfocus', 'hyper focus', 'over focus', 'fixat',
+        'medication', 'ritalin', 'adderall', 'concerta', 'vyvanse',
+        'dopamine', 'reward system', 'instant gratification',
+        'interrupt', 'blurt out', 'impatient', 'can\'t wait', 'cant wait',
+      ];
+
+      const autismWords = [
+        'autism', 'autistic', 'asd', 'asperger', 'spectrum',
+        'sensory', 'overstimulat', 'understimulat', 'stimming', 'stim',
+        'overwhelm', 'overload', 'meltdown', 'shutdown', 'shutting down',
+        'loud noise', 'noise', 'noisy', 'sound sensitiv', 'loud',
+        'crowded', 'crowd', 'too many people', 'social situation',
+        'bright light', 'fluorescent', 'flickering', 'flashing',
+        'texture', 'fabric', 'clothing tag', 'itchy', 'scratchy',
+        'routine', 'schedule', 'predictab', 'unpredictab', 'change',
+        'transition', 'unexpected', 'surprise', 'new environment',
+        'eye contact', 'facial expression', 'body language', 'tone of voice',
+        'literal', 'sarcasm', 'idiom', 'figure of speech', 'metaphor',
+        'special interest', 'intense interest', 'obsess', 'fixat', 'passion',
+        'repetitive', 'pattern', 'sameness', 'same way', 'same order',
+        'anxious', 'anxiety', 'nervous', 'worried', 'panic', 'stress',
+        'too much information', 'too much', 'too fast', 'too loud', 'too bright',
+        'can\'t cope', 'cant cope', 'cannot cope', 'falling apart',
+        'need quiet', 'need space', 'need alone', 'need break', 'decompress',
+        'mask', 'masking', 'pretending', 'exhausting to socialize',
+        'social cue', 'social skill', 'small talk', 'conversation',
+        'neurodiverg', 'neurodivers', 'atypical', 'different brain',
+        'comfort zone', 'safe space', 'calming', 'soothing',
+        'food texture', 'picky eat', 'smell', 'taste sensitiv',
+        'echolalia', 'scripting', 'flat affect', 'monotone',
+        'executive function', 'planning', 'organiz', 'priorit',
+        'processing speed', 'processing time', 'need more time',
+        'emotional regulat', 'self regulat', 'dysregulat',
+        'over think', 'overthink', 'ruminate', 'ruminat',
+        'burnt out', 'burnout', 'autistic burnout', 'exhausted',
+        'nonverbal', 'non verbal', 'non-verbal', 'selective mutism', 'mute',
+        'flapping', 'rocking', 'spinning', 'hand flapping',
+        'sensory diet', 'sensory room', 'weighted blanket', 'fidget',
+        'spoon theory', 'low spoons', 'no spoons', 'energy budget',
+      ];
+
+      const physicalWords = [
+        'physical', 'motor', 'wheelchair', 'mobility', 'paralys',
+        'movement', 'limb', 'walk', 'walking', 'leg', 'arm',
+        'can\'t move', 'cant move', 'cannot move', 'limited movement',
+        'cerebral palsy', 'cp', 'muscular dystrophy', 'md',
+        'spinal cord', 'spinal injury', 'spine', 'back injury',
+        'amputee', 'amputation', 'prosthetic', 'prosthesis',
+        'fine motor', 'gross motor', 'coordination', 'balance',
+        'tremor', 'shaking', 'spasm', 'spastic', 'spasticity',
+        'dexterity', 'grip', 'grasp', 'pinch', 'typing',
+        'keyboard', 'mouse', 'click', 'scroll', 'swipe',
+        'assistive device', 'switch control', 'eye tracking',
+        'voice control', 'voice command', 'sip and puff',
+        'quadripleg', 'parapleg', 'hemipleg', 'tetrapleg',
+        'stroke', 'brain injury', 'tbi', 'traumatic brain',
+        'arthritis', 'joint', 'stiff', 'pain', 'chronic pain',
+        'fatigue', 'tired easily', 'energy', 'stamina',
+        'crutch', 'walker', 'scooter', 'adaptive',
+        'one hand', 'single hand', 'left hand', 'right hand',
+      ];
+
+      const learningWords = [
+        'dyslexia', 'dyslexic', 'read', 'reading', 'letter', 'spell',
+        'spelling', 'writing', 'write', 'words', 'word',
+        'mix up letters', 'letters jump', 'letters move', 'letters swim',
+        'b and d', 'p and q', 'mirror', 'reverse', 'backward',
+        'slow reader', 'reading speed', 'comprehension',
+        'phonics', 'phonetic', 'sound out', 'sounding out',
+        'decode', 'decoding', 'fluency', 'literacy',
+        'dyscalculia', 'math', 'numbers', 'counting', 'arithmetic',
+        'dysgraphia', 'handwriting', 'pencil grip', 'forming letters',
+        'learning disability', 'learning difficulty', 'learning disorder',
+        'slow learner', 'learn slowly', 'takes longer', 'need extra time',
+        'tutoring', 'remedial', 'special education', 'iep',
+        'processing disorder', 'auditory processing', 'visual processing',
+        'working memory', 'short term memory', 'retain information',
+        'study', 'homework', 'assignment', 'exam', 'test',
+        'grade', 'failing', 'behind', 'catch up', 'gap',
+      ];
+
+      // Score each profile by counting keyword hits
+      const score = (words: string[]) => words.filter(w => inputLower.includes(w)).length;
+
+      const scores = {
+        visual: score(visualWords),
+        adhd: score(adhdWords),
+        autism: score(autismWords),
+        physical: score(physicalWords),
+        learning: score(learningWords),
+      };
+
+      // Find the profile with the highest score
+      const best = (Object.entries(scores) as [string, number][])
+        .sort((a, b) => b[1] - a[1])[0];
+
+      if (best[1] > 0) {
+        const profileResponses: Record<string, string> = {
+          visual: 'Understood. Applying High Contrast mode and Text-to-Speech support. Stand by...',
+          adhd: 'Got it. Applying the Sensory Focus profile to reduce distractions. Stand by...',
+          autism: 'I understand. Applying the calm, low-stimulation Sensory Profile designed for your comfort. Stand by...',
+          physical: 'Understood. Applying accessibility controls for motor support. Stand by...',
+          learning: 'Understood. Applying the Dyslexia & Literacy support profile. Stand by...',
+        };
+        return { profile: best[0] as any, response: profileResponses[best[0]] };
+      }
+
+      // True default — nothing matched at all
+      return { profile: 'learning', response: "I'd like to help! Applying the standard learning profile for now. You can always change this later." };
+    };
+
+    classifyWithLLM().then(({ profile, response }) => {
+      setIsTyping(false);
+      const profileNames: Record<string, string> = {
+        visual: 'Visual Impairment',
+        adhd: 'ADHD',
+        autism: 'Autism',
+        physical: 'Physical Accessibility',
+        learning: 'Dyslexia & Literacy'
+      };
+      const recommendationMsg = `${response} I'd recommend the ${profileNames[profile] || profile} learning path for you. Would you like me to take you there? (Yes/No)`;
+      addAiMessage(recommendationMsg);
+      setPendingProfile(profile);
+    });
   };
 
   return (

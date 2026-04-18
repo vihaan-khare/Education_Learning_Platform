@@ -7,10 +7,14 @@
  */
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const PhysicalDisability: React.FC = () => {
+  const navigate = useNavigate();
+
   return (
     <div style={styles.page}>
+      <button style={styles.backBtn} onClick={() => navigate('/home')}>← Back to Home</button>
       <div style={styles.card}>
         <div style={styles.icon}>♿</div>
         <h1 style={styles.title}>Your Learning Space</h1>
@@ -25,6 +29,20 @@ const PhysicalDisability: React.FC = () => {
 };
 
 const styles: Record<string, React.CSSProperties> = {
+  backBtn: {
+    padding: '0.6rem 1.25rem',
+    backgroundColor: '#ffffff',
+    color: '#4a5568',
+    border: '1px solid #e2e8f0',
+    borderRadius: '2rem',
+    fontWeight: 600,
+    fontSize: '0.9rem',
+    cursor: 'pointer',
+    position: 'absolute',
+    top: '2rem',
+    left: '2rem',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+  },
   page: {
     minHeight: '100vh',
     display: 'flex',

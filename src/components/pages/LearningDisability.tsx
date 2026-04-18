@@ -9,7 +9,7 @@ const LearningDisability: React.FC = () => {
     <GamePlayer 
       mode="dyslexia" 
       title="Dyslexia & Literacy Lab" 
-      onBack={() => navigate('/')} 
+      onBack={() => navigate('/home')} 
     />
   );
 };

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { auth, db } from '../../firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { logActivity } from '../../services/activityService';
 
 interface GamePlayerProps {
   mode: 'adhd' | 'dyslexia';
@@ -28,8 +29,25 @@ const GamePlayer: React.FC<GamePlayerProps> = ({ mode, title, onBack }) => {
         }
       }
     };
+
     fetchUser();
-  }, []);
+
+    // Listen for level completion from the game iframe
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'LEARNING_ACTIVITY') {
+        const { domain, level } = event.data;
+        logActivity(
+          mode, 
+          domain, 
+          `Level ${level}`, 
+          'lesson_complete'
+        );
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [mode]);
 
   return (
     <div style={styles.container}>
