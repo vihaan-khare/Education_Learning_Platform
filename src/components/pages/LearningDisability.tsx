@@ -1,79 +1,17 @@
-/**
- * LearningDisability.tsx — Learning Disability / Dyslexia learning environment
- *
- * FLOW: Routed to when the user's Firestore disabilityProfile === 'learning'.
- *       This covers profiles such as dyslexia, dyscalculia, etc.
- *
- * STATUS: Placeholder — dyslexia-specific features to be built in a future sprint.
- *         The UI will mirror the ADHD/Autism catalog pattern when ready.
- */
-
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import GamePlayer from '../common/GamePlayer';
 
 const LearningDisability: React.FC = () => {
-  return (
-    <div style={styles.page}>
-      <div style={styles.card}>
-        <div style={styles.icon}>📚</div>
-        <h1 style={styles.title}>Your Learning Space</h1>
-        <p style={styles.desc}>
-          We are building a personalised experience designed around how you learn best —
-          with dyslexia-friendly fonts, reading assists, and step-by-step guides.
-        </p>
-        <div style={styles.badge}>Coming Soon</div>
-      </div>
-    </div>
-  );
-};
+  const navigate = useNavigate();
 
-const styles: Record<string, React.CSSProperties> = {
-  page: {
-    minHeight: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f0f4f8',
-    fontFamily: "'Inter', system-ui, sans-serif",
-    padding: '2rem',
-  },
-  card: {
-    textAlign: 'center',
-    padding: '3rem 2.5rem',
-    backgroundColor: '#ffffff',
-    borderRadius: '1.25rem',
-    border: '1px solid #e2e8f0',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
-    maxWidth: '480px',
-    width: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '1rem',
-  },
-  icon: { fontSize: '4rem' },
-  title: {
-    fontSize: '2rem',
-    fontWeight: 800,
-    color: '#1a202c',
-    margin: 0,
-  },
-  desc: {
-    color: '#718096',
-    fontSize: '1rem',
-    lineHeight: 1.7,
-    margin: 0,
-  },
-  badge: {
-    marginTop: '0.5rem',
-    padding: '0.4rem 1.25rem',
-    backgroundColor: '#edf2f7',
-    color: '#4a5568',
-    borderRadius: '2rem',
-    fontWeight: 700,
-    fontSize: '0.85rem',
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-  },
+  return (
+    <GamePlayer 
+      mode="dyslexia" 
+      title="Dyslexia & Literacy Lab" 
+      onBack={() => navigate('/')} 
+    />
+  );
 };
 
 export default LearningDisability;

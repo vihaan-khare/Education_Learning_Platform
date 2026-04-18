@@ -1,0 +1,84 @@
+import React from 'react';
+
+interface GamePlayerProps {
+  mode: 'adhd' | 'dyslexia';
+  title: string;
+  onBack: () => void;
+}
+
+const GamePlayer: React.FC<GamePlayerProps> = ({ mode, title, onBack }) => {
+  return (
+    <div style={styles.container}>
+      <header style={styles.header}>
+        <button onClick={onBack} style={styles.backBtn}>
+          ← Exit to Library
+        </button>
+        <h2 style={styles.title}>{title}</h2>
+        <div style={styles.badge}>
+          {mode === 'adhd' ? '🎯 Focus Session' : '📚 Literacy Lab'}
+        </div>
+      </header>
+
+      <iframe
+        src={`/play.html?mode=${mode}`}
+        style={styles.iframe}
+        title="NeuroLearn Play"
+        frameBorder="0"
+      />
+    </div>
+  );
+};
+
+const styles: Record<string, React.CSSProperties> = {
+  container: {
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100vh',
+    backgroundColor: '#f8f6ff',
+    overflow: 'hidden',
+  },
+  header: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '20px',
+    padding: '12px 24px',
+    backgroundColor: '#ffffff',
+    borderBottom: '2px solid rgba(108, 99, 255, 0.1)',
+    zIndex: 10,
+  },
+  backBtn: {
+    padding: '10px 18px',
+    borderRadius: '50px',
+    border: '2px solid #6C63FF',
+    backgroundColor: 'transparent',
+    color: '#6C63FF',
+    fontWeight: 800,
+    cursor: 'pointer',
+    fontSize: '14px',
+    transition: 'all 0.2s',
+  },
+  title: {
+    margin: 0,
+    fontSize: '18px',
+    fontWeight: 900,
+    color: '#1A1A2E',
+    flex: 1,
+  },
+  badge: {
+    padding: '6px 14px',
+    backgroundColor: '#EAE9FF',
+    color: '#6C63FF',
+    borderRadius: '50px',
+    fontSize: '12px',
+    fontWeight: 800,
+    textTransform: 'uppercase',
+  },
+  iframe: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    border: 'none',
+  },
+};
+
+export default GamePlayer;

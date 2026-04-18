@@ -950,7 +950,22 @@ function spawnConfetti(){const colors=['#6C63FF','#FF6B9D','#FFD93D','#51CF66','
 
 function resetProgress(){if(!confirm('Reset all progress?'))return;localStorage.removeItem('neurolearn_state_v2');location.reload();}
 
-loadState(); renderHome();
+loadState();
+
+// --- ADHD/DYSLEXIA INTEGRATION ---
+const urlParams = new URLSearchParams(window.location.search);
+const mode = urlParams.get('mode');
+if (mode === 'adhd') {
+  state.settings.focus = true;
+  state.settings.breaks = true;
+  applySettings();
+} else if (mode === 'dyslexia') {
+  // If dyslexia mode, maybe auto-open Learn to Write after name is set
+  // For now just ensuring settings are applied
+  applySettings();
+}
+
+renderHome();
 </script>
 </body>
 </html>

@@ -53,7 +53,7 @@ const AdhdAutism: React.FC = () => {
     return <AutismPage onBack={() => setSelected(null)} />;
   }
   if (selected === 'adhd') {
-    return <AdhdPage />;
+    return <AdhdPage onBack={() => setSelected(null)} />;
   }
 
   // No profile set (dev / unauthenticated) — show the sub-section selector
