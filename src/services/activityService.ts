@@ -58,7 +58,7 @@ export async function logActivity(
       section,
       action,
       timeSpent: timeSpent || 0,
-      timestamp: serverTimestamp(),
+      timestamp: Date.now(), // Use explicit timestamp to prevent 'null' query drop on local cache
     });
   } catch (err) {
     console.error('[ActivityService] Failed to log activity:', err);
@@ -160,5 +160,86 @@ export async function getGameState(mode: string): Promise<string | null> {
   } catch (err) {
     console.error('[ActivityService] Failed to load game state:', err);
     return null;
+  }
+}
+
+// =====================================================================
+// ADMIN SERVICE FUNCTIONS
+// =====================================================================
+
+export interface AdminUser {
+  uid: string;
+  name: string;
+  email: string;
+  disabilityProfile: string | null;
+  lastActiveAt: any;
+  age?: number;
+}
+
+export interface GlobalActivityEntry extends ActivityEntry {
+  userId: string;
+  userName: string;
+}
+
+/**
+ * Fetch all registered users from Firestore (Admin only).
+ */
+export async function getAllUsers(): Promise<AdminUser[]> {
+  try {
+    const usersRef = collection(db, 'users');
+    const snap = await getDocs(usersRef);
+
+    return snap.docs.map(d => {
+      const data = d.data();
+      return {
+        uid: d.id,
+        name: data.name || 'Unknown',
+        email: data.email || '',
+        disabilityProfile: data.disabilityProfile || null,
+        lastActiveAt: data.lastActiveAt || null,
+        age: data.age || undefined,
+      };
+    });
+  } catch (err) {
+    console.error('[ActivityService] Failed to fetch all users:', err);
+    return [];
+  }
+}
+
+/**
+ * Fetch the most recent activities across ALL users (Admin only).
+ */
+export async function getGlobalActivity(maxUsers: number = 50): Promise<GlobalActivityEntry[]> {
+  try {
+    const activityRoot = collection(db, 'activity');
+    const activitySnap = await getDocs(activityRoot);
+
+    const allEntries: GlobalActivityEntry[] = [];
+    const userIds = activitySnap.docs.map(d => d.id).slice(0, maxUsers);
+
+    for (const userId of userIds) {
+      let userName = userId;
+      try {
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        if (userDoc.exists()) {
+          userName = userDoc.data().name || userDoc.data().email || userId;
+        }
+      } catch (_) {}
+
+      const sessionsRef = collection(db, 'activity', userId, 'sessions');
+      const q = query(sessionsRef, orderBy('timestamp', 'desc'), limit(5));
+      const sessionsSnap = await getDocs(q);
+
+      sessionsSnap.docs.forEach(d => {
+        const data = d.data() as ActivityEntry;
+        allEntries.push({ ...data, userId, userName });
+      });
+    }
+
+    allEntries.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    return allEntries.slice(0, 50);
+  } catch (err) {
+    console.error('[ActivityService] Failed to fetch global activity:', err);
+    return [];
   }
 }

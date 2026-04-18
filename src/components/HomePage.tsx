@@ -21,13 +21,21 @@ const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dbError, setDbError] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
-      await updateLastActive();
-      await logActivity('dashboard', 'Student Portal', 'Home', 'page_visit');
-      const data = await getUserStats();
-      setStats(data);
+      try {
+        await updateLastActive();
+        await logActivity('dashboard', 'Student Portal', 'Home', 'page_visit');
+        const data = await getUserStats();
+        if (!data) {
+          setDbError("Firestore Database is not enabled or accessible. Please check your Firebase console rules.");
+        }
+        setStats(data);
+      } catch (e: any) {
+        setDbError(e.message || "Failed to connect to Firebase.");
+      }
       setLoading(false);
     };
     load();
@@ -89,17 +97,35 @@ const HomePage: React.FC = () => {
         </div>
       </div>
 
+      {dbError && (
+        <div style={{ backgroundColor: '#fed7d7', color: '#c53030', padding: '1rem', borderRadius: '0.5rem', marginBottom: '2rem', border: '1px solid #f56565' }}>
+          <strong>Database Connection Error:</strong> {dbError}
+          <div style={{ marginTop: '0.5rem', fontSize: '0.9rem' }}>
+            To fix this: Go to console.firebase.google.com &gt; Firestore Database &gt; Rules, and set:<br/>
+            <code>allow read, write: if request.auth != null;</code>
+          </div>
+        </div>
+      )}
+
       {/* STATS ROW */}
       <div style={s.statsRow}>
         <div style={s.statCard}>
+          <div style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>📚</div>
           <div style={s.statValue}>{stats?.totalActivities || 0}</div>
           <div style={s.statLabel}>Activities Logged</div>
         </div>
         <div style={s.statCard}>
+          <div style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>🎯</div>
           <div style={s.statValue}>{profileLabel(stats?.disabilityProfile || null)}</div>
           <div style={s.statLabel}>Current Profile</div>
         </div>
+        <div style={s.statCard}>
+          <div style={{ fontSize: '2rem', marginBottom: '0.25rem' }}>🔥</div>
+          <div style={s.statValue}>{stats?.recentActivity?.filter(a => a.action === 'lesson_complete').length || 0}</div>
+          <div style={s.statLabel}>Lessons Completed</div>
+        </div>
       </div>
+
       {/* DYNAMIC LEARNING BUTTON */}
       <section style={s.section}>
         <div style={s.mainActionCard}>

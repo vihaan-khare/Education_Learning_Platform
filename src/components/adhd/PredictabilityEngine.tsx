@@ -99,7 +99,7 @@ const PredictabilityEngine: React.FC<PredictableEngineProps> = ({
           </button>
           {!hideBackBtn && (
             <button style={{...s.btnSecondary, marginTop: '0.75rem'}} onClick={onBackToLibrary}>
-              ← Back to Library
+              ← Home
             </button>
           )}
         </div>
@@ -129,7 +129,7 @@ const PredictabilityEngine: React.FC<PredictableEngineProps> = ({
       {/* Back to Library — always visible unless hidden */}
       {!hideBackBtn && (
         <button style={s.backLink} onClick={onBackToLibrary}>
-          ← Back to Library
+          ← Home
         </button>
       )}
 
@@ -266,7 +266,7 @@ const PredictabilityEngine: React.FC<PredictableEngineProps> = ({
             </ul>
             {!hideBackBtn ? (
               <button style={{ ...s.btn, backgroundColor: '#38a169', marginTop: '1.5rem', width: '100%' }} onClick={() => { if (onComplete) onComplete(); onBackToLibrary(); }}>
-                ← Return to Library
+                ← Home
               </button>
             ) : (
               <button style={{ ...s.btn, backgroundColor: '#38a169', marginTop: '1.5rem', width: '100%' }} onClick={() => { if (onComplete) onComplete(); }}>

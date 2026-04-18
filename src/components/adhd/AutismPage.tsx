@@ -320,7 +320,7 @@ const AutismPage: React.FC<AutismPageProps> = ({ onBack }) => {
     <div style={isFocusMode ? focusStyles.page : styles.page}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
         <button style={styles.backButton} onClick={() => setSelectedCourseId(null)}>
-          ⬅ Back to Library
+          ⬅ Home
         </button>
         {/* FOCUS MODE TOGGLE inside course */}
         <button

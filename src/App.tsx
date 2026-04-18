@@ -23,6 +23,7 @@
 
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AccessibilityProvider } from './context/AccessibilityContext';
+import WelcomeGate from './components/WelcomeGate';
 import Onboarding from './components/Onboarding';
 import Dashboard from './components/Dashboard';
 import CoursePlayer from './components/CoursePlayer';
@@ -37,6 +38,7 @@ import PhysicalDisability from './components/pages/PhysicalDisability';
 import VisualImpairment from './components/pages/VisualImpairment';
 import AdhdPage from './components/adhd/AdhdPage';
 import AutismPage from './components/adhd/AutismPage';
+import AdminDashboard from './components/admin/AdminDashboard';
 
 function App() {
   return (
@@ -44,7 +46,7 @@ function App() {
       <Router>
         <Routes>
           {/* Auth routes */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/" element={<WelcomeGate />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
@@ -60,6 +62,9 @@ function App() {
           <Route path="/visual-impairment" element={<VisualImpairment />} />
           <Route path="/adhd" element={<AdhdPage onBack={() => window.location.href = '/home'} />} />
           <Route path="/autism" element={<AutismPage onBack={() => window.location.href = '/home'} />} />
+
+          {/* Admin route */}
+          <Route path="/admin" element={<AdminDashboard />} />
 
           {/* Legacy routes */}
           <Route path="/dashboard" element={<Dashboard />} />

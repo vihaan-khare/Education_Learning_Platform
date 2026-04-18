@@ -9,8 +9,8 @@ const Onboarding: React.FC = () => {
   const { applyProfileSettings } = useAccessibility();
   const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null);
-  
-  const [messages, setMessages] = useState<{sender: 'ai' | 'user', text: string}[]>([]);
+
+  const [messages, setMessages] = useState<{ sender: 'ai' | 'user', text: string }[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [userInput, setUserInput] = useState('');
   const [pendingProfile, setPendingProfile] = useState<string | null>(null);
@@ -59,12 +59,12 @@ const Onboarding: React.FC = () => {
   const handleSend = (overrideText?: string | any) => {
     const currentInput = typeof overrideText === 'string' ? overrideText : userInput;
     if (!currentInput.trim()) return;
-    
+
     setMessages(prev => [...prev, { sender: 'user', text: currentInput }]);
     if (typeof overrideText !== 'string') {
       setUserInput('');
     }
-    
+
     if (pendingProfile) {
       if (currentInput.toLowerCase().match(/\b(yes|yeah|sure|ok|okay|yep|y)\b/)) {
         addAiMessage("Great! Taking you there now...");
@@ -91,41 +91,9 @@ const Onboarding: React.FC = () => {
 
     setIsTyping(true);
 
-    // Use Gemini LLM to classify the user's disability from natural language
+    // Use Keyword Matching first, and use Gemini LLM as a fallback
     const classifyWithLLM = async (): Promise<{ profile: 'visual' | 'learning' | 'adhd' | 'autism' | 'physical', response: string }> => {
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      
-      if (apiKey && apiKey !== 'your-gemini-api-key') {
-        try {
-          const prompt = `Classify into ONE: visual,adhd,autism,learning,physical.
-Input:"${currentInput.slice(0, 150)}"
-Reply JSON only:{"profile":"...","response":"one sentence"}`;
 
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-          });
-
-          if (res.ok) {
-            const data = await res.json();
-            const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (raw) {
-              const cleaned = raw.replace(/```json|```/g, '').trim();
-              const parsed = JSON.parse(cleaned);
-              const validProfiles = ['visual', 'learning', 'adhd', 'autism', 'physical'];
-              if (validProfiles.includes(parsed.profile)) {
-                return { profile: parsed.profile, response: parsed.response };
-              }
-            }
-          }
-        } catch (err) {
-          console.warn('[Aurora] LLM classification failed, falling back to keyword match:', err);
-        }
-      }
-
-      // ── FOOLPROOF KEYWORD FALLBACK ──
-      // Runs when LLM is unavailable. Pure in-memory string matching, zero performance impact.
       const inputLower = currentInput.toLowerCase();
 
       const visualWords = [
@@ -253,6 +221,7 @@ Reply JSON only:{"profile":"...","response":"one sentence"}`;
       const best = (Object.entries(scores) as [string, number][])
         .sort((a, b) => b[1] - a[1])[0];
 
+      // If keywords match strongly, skip the LLM entirely
       if (best[1] > 0) {
         const profileResponses: Record<string, string> = {
           visual: 'Understood. Applying High Contrast mode and Text-to-Speech support. Stand by...',
@@ -264,7 +233,39 @@ Reply JSON only:{"profile":"...","response":"one sentence"}`;
         return { profile: best[0] as any, response: profileResponses[best[0]] };
       }
 
-      // True default — nothing matched at all
+      // If keywords do NOT match, fallback to the LLM
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+
+      if (apiKey && apiKey !== 'your-gemini-api-key') {
+        try {
+          const prompt = `Classify into ONE: visual,adhd,autism,learning,physical.
+Input:"${currentInput.slice(0, 150)}"
+Reply JSON only:{"profile":"...","response":"one sentence"}`;
+
+          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (raw) {
+              const cleaned = raw.replace(/```json|```/g, '').trim();
+              const parsed = JSON.parse(cleaned);
+              const validProfiles = ['visual', 'learning', 'adhd', 'autism', 'physical'];
+              if (validProfiles.includes(parsed.profile)) {
+                return { profile: parsed.profile, response: parsed.response };
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('[Aurora] LLM classification failed:', err);
+        }
+      }
+
+      // True default — if even the LLM fails or API is unavailable
       return { profile: 'learning', response: "I'd like to help! Applying the standard learning profile for now. You can always change this later." };
     };
 
@@ -285,7 +286,7 @@ Reply JSON only:{"profile":"...","response":"one sentence"}`;
 
   return (
     <main className="flex h-screen w-full bg-surface text-on-surface font-body overflow-hidden items-center justify-center">
-      
+
       {/* Central AI Interaction */}
       <section className="w-full max-w-4xl h-full bg-gradient-to-br from-surface-container-low to-surface flex flex-col relative shadow-2xl border-x border-outline-variant/20">
         <div className="p-12 pb-6 border-b border-outline-variant/10 flex justify-between items-center">
@@ -305,7 +306,7 @@ Reply JSON only:{"profile":"...","response":"one sentence"}`;
             <div key={idx} className={`flex gap-4 max-w-[85%] animate-fade-in ${msg.sender === 'user' ? 'ml-auto flex-row-reverse' : ''}`}>
               {msg.sender === 'ai' && (
                 <div className="w-10 h-10 rounded-full intelligence-gradient flex items-center justify-center shrink-0 glow-soft">
-                  <span className="material-symbols-outlined text-on-primary text-xl" style={{fontVariationSettings: "'FILL' 1"}}>psychology</span>
+                  <span className="material-symbols-outlined text-on-primary text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>psychology</span>
                 </div>
               )}
               <div className={`rounded-xl p-5 text-on-surface ${msg.sender === 'ai' ? 'bg-surface-container border-l-2 border-primary/30 shadow-md' : 'bg-surface-container-high'}`}>
@@ -319,8 +320,8 @@ Reply JSON only:{"profile":"...","response":"one sentence"}`;
             <div className="flex gap-4 items-center pl-14">
               <div className="flex gap-1.5 px-3 py-2 bg-surface-container-high rounded-full w-fit shadow-inner">
                 <div className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce"></div>
-                <div className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce" style={{animationDelay: "0.2s"}}></div>
-                <div className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce" style={{animationDelay: "0.4s"}}></div>
+                <div className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+                <div className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce" style={{ animationDelay: "0.4s" }}></div>
               </div>
               <span className="text-xs font-label text-outline uppercase tracking-tighter">Aurora is typing</span>
             </div>
@@ -332,15 +333,15 @@ Reply JSON only:{"profile":"...","response":"one sentence"}`;
           <div className="relative">
             <div className="absolute -top-12 left-0 w-full h-12 bg-gradient-to-t from-surface to-transparent pointer-events-none"></div>
             <div className="flex items-center gap-4 bg-surface-container-high p-2 rounded-2xl border border-outline-variant/10 shadow-lg relative z-10">
-              <input 
-                className="flex-grow bg-transparent border-none focus:ring-0 px-4 py-3 text-on-surface placeholder-on-surface-variant/50 outline-none" 
-                placeholder="Type your response..." 
+              <input
+                className="flex-grow bg-transparent border-none focus:ring-0 px-4 py-3 text-on-surface placeholder-on-surface-variant/50 outline-none"
+                placeholder="Type your response..."
                 type="text"
                 value={userInput}
                 onChange={(e) => setUserInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               />
-              <button 
+              <button
                 onClick={handleSend}
                 className="intelligence-gradient text-on-primary font-label font-bold px-6 py-3 rounded-xl transition-all hover:scale-105 active:scale-95 flex items-center gap-2 cursor-pointer border-none"
               >
@@ -361,8 +362,11 @@ Reply JSON only:{"profile":"...","response":"one sentence"}`;
                 <button onClick={() => navigate('/visual-impairment')} className="bg-surface-container-highest text-on-surface px-4 py-2 rounded-lg text-xs font-bold hover:bg-primary hover:text-on-primary transition-colors border border-outline-variant/20 cursor-pointer">
                   3. Visual Impairment
                 </button>
-                <button onClick={() => navigate('/adhd-autism')} className="bg-surface-container-highest text-on-surface px-4 py-2 rounded-lg text-xs font-bold hover:bg-[#2b6cb0] hover:text-white transition-colors border border-outline-variant/20 cursor-pointer">
-                  4. ADHD/AUTISM
+                <button onClick={() => navigate('/adhd')} className="bg-surface-container-highest text-on-surface px-4 py-2 rounded-lg text-xs font-bold hover:bg-[#2b6cb0] hover:text-white transition-colors border border-outline-variant/20 cursor-pointer">
+                  4. ADHD
+                </button>
+                <button onClick={() => navigate('/autism')} className="bg-surface-container-highest text-on-surface px-4 py-2 rounded-lg text-xs font-bold hover:bg-[#2b6cb0] hover:text-white transition-colors border border-outline-variant/20 cursor-pointer">
+                  5. Autism
                 </button>
               </div>
             </div>
@@ -372,12 +376,12 @@ Reply JSON only:{"profile":"...","response":"one sentence"}`;
 
       {/* Overlay UI Assets */}
       <div className="fixed top-8 right-8 z-50 flex gap-4">
-        <button 
+        <button
           className="glass-panel p-2.5 rounded-full text-on-surface-variant hover:text-primary transition-colors cursor-pointer border-none shadow-md"
-          onClick={() => { 
+          onClick={() => {
             window.speechSynthesis.cancel();
-            applyProfileSettings('none'); 
-            navigate(getRouteForProfile('none')); 
+            applyProfileSettings('none');
+            navigate(getRouteForProfile('none'));
           }}
           title="Skip Onboarding"
         >

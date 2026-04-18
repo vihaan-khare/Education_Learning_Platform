@@ -14,7 +14,7 @@
  */
 
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -26,6 +26,20 @@ const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('audio') === 'true') {
+      const synth = window.speechSynthesis;
+      synth.cancel();
+      const utterance = new SpeechSynthesisUtterance(
+        "You are on the Login page. Please press the Tab key to focus on the Email field. Type your email. Press Tab again to enter your password. Then press Enter to log in."
+      );
+      utterance.rate = 0.9;
+      synth.speak(utterance);
+    }
+  }, [location]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,11 +49,32 @@ const Login: React.FC = () => {
     try {
       // Step 1: Authenticate with Firebase
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-      // Step 2: Go to the student home dashboard
-      navigate('/home');
+      // Step 2: Fetch user document
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const data = userDoc.exists() ? userDoc.data() : null;
+
+      // Step 3: Admin check FIRST — admins never go to disability pages
+      if (data?.role === 'admin') {
+        navigate('/admin');
+        return;
+      }
+
+      // Step 4: Regular student — route by disability profile
+      const profile = data?.disabilityProfile ?? null;
+      navigate(getRouteForProfile(profile));
     } catch (err: any) {
-      setError(err.message);
+      const code = err?.code || '';
+      if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
+        setError('Incorrect email or password. Please check your credentials and try again.');
+      } else if (code === 'auth/too-many-requests') {
+        setError('Too many failed attempts. Please wait a few minutes before trying again.');
+      } else if (code === 'auth/network-request-failed') {
+        setError('Network error. Please check your internet connection.');
+      } else {
+        setError(err.message || 'Login failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

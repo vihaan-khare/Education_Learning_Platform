@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -15,6 +15,20 @@ const Register: React.FC = () => {
   });
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('audio') === 'true') {
+      const synth = window.speechSynthesis;
+      synth.cancel();
+      const utterance = new SpeechSynthesisUtterance(
+        "You are on the Registration page. Please press Tab to enter your Name. Press Tab again for Email. Then Password, Phone Number, and Age. Then press Enter to create your account."
+      );
+      utterance.rate = 0.9;
+      synth.speak(utterance);
+    }
+  }, [location]);
 
   const isMinor = parseInt(formData.age, 10) < 18;
 

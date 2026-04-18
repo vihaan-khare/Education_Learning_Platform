@@ -68,7 +68,7 @@ const GamePlayer: React.FC<GamePlayerProps> = ({ mode, title, onBack }) => {
     <div style={styles.container}>
       <header style={styles.header}>
         <button onClick={onBack} style={styles.backBtn}>
-          ← Exit to Library
+          ← Home
         </button>
         <h2 style={styles.title}>{title}</h2>
         <div style={styles.badge}>
