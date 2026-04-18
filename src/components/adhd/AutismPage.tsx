@@ -178,8 +178,10 @@ const AutismPage: React.FC<AutismPageProps> = ({ onBack }) => {
   
   // Explicit Progress Tracking
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
-  // Content Expectation Setting — tracks which steps have been previewed and confirmed
+  // Content Expectation Setting
   const [confirmedItems, setConfirmedItems] = useState<Set<string>>(new Set());
+  // Focus Mode — reduces visual distractions
+  const [isFocusMode, setIsFocusMode] = useState(false);
 
   const confirmExpectation = (itemId: string) => {
     setConfirmedItems(prev => new Set(prev).add(itemId));
@@ -227,15 +229,23 @@ const AutismPage: React.FC<AutismPageProps> = ({ onBack }) => {
 
   if (!selectedCourseId) {
     return (
-      <div style={styles.page}>
-        <header style={styles.header}>
+      <div style={isFocusMode ? focusStyles.page : styles.page}>
+        <header style={isFocusMode ? focusStyles.header : styles.header}>
           {onBack && (
             <button style={styles.backButton} onClick={onBack}>
               ⬅ Back to Learning Paths
             </button>
           )}
           <h1 style={styles.courseTitle}>Learning Library</h1>
-          <p style={styles.courseSubtitle}>Select a module to begin</p>
+          {!isFocusMode && <p style={styles.courseSubtitle}>Select a module to begin</p>}
+
+          {/* FOCUS MODE TOGGLE */}
+          <button
+            onClick={() => setIsFocusMode(f => !f)}
+            style={isFocusMode ? focusStyles.toggleBtn : styles.toggleBtn}
+          >
+            {isFocusMode ? '💡 Exit Focus Mode' : '🎯 Enter Focus Mode'}
+          </button>
         </header>
 
         <div style={styles.catalogGrid}>
@@ -307,16 +317,25 @@ const AutismPage: React.FC<AutismPageProps> = ({ onBack }) => {
   const progressPct = totalCourseItems > 0 ? Math.round((completedCount / totalCourseItems) * 100) : 0;
 
   return (
-    <div style={styles.page}>
-      <button style={styles.backButton} onClick={() => setSelectedCourseId(null)}>
-        ⬅ Back to Library
-      </button>
+    <div style={isFocusMode ? focusStyles.page : styles.page}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+        <button style={styles.backButton} onClick={() => setSelectedCourseId(null)}>
+          ⬅ Back to Library
+        </button>
+        {/* FOCUS MODE TOGGLE inside course */}
+        <button
+          onClick={() => setIsFocusMode(f => !f)}
+          style={isFocusMode ? focusStyles.toggleBtn : styles.toggleBtn}
+        >
+          {isFocusMode ? '💡 Exit Focus Mode' : '🎯 Enter Focus Mode'}
+        </button>
+      </div>
 
-      <header style={styles.header}>
+      <header style={isFocusMode ? focusStyles.header : styles.header}>
         <h1 style={styles.courseTitle}>{activeCourse.title}</h1>
-        <p style={styles.courseSubtitle}>
-          A structured learning experience.
-        </p>
+        {!isFocusMode && (
+          <p style={styles.courseSubtitle}>A structured learning experience.</p>
+        )}
 
         {/* EXPLICIT PROGRESS MAPPING */}
         <div style={{ marginTop: '1.5rem', backgroundColor: '#e2e8f0', borderRadius: '1rem', height: '1.25rem', overflow: 'hidden', width: '100%', maxWidth: '600px', margin: '1.5rem auto 0 auto' }}>
@@ -329,20 +348,23 @@ const AutismPage: React.FC<AutismPageProps> = ({ onBack }) => {
 
       {hasSections && (
         <>
-          <div style={styles.tabBar}>
-            {sections.map(section => (
-              <button
-                key={section.id}
-                onClick={() => setActiveSection(section.id)}
-                style={{
-                  ...styles.tab,
-                  ...(activeSection === section.id ? styles.tabActive : {}),
-                }}
-              >
-                {section.title}
-              </button>
-            ))}
-          </div>
+          {/* Hide tab bar in focus mode */}
+          {!isFocusMode && (
+            <div style={styles.tabBar}>
+              {sections.map(section => (
+                <button
+                  key={section.id}
+                  onClick={() => setActiveSection(section.id)}
+                  style={{
+                    ...styles.tab,
+                    ...(activeSection === section.id ? styles.tabActive : {}),
+                  }}
+                >
+                  {section.title}
+                </button>
+              ))}
+            </div>
+          )}
 
           {sections.map(section => {
             if (section.id !== activeSection) return null;
@@ -643,7 +665,51 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '1rem',
     cursor: 'pointer',
     transition: 'background-color 0.2s',
-  }
+  },
+  toggleBtn: {
+    marginTop: '1rem',
+    padding: '0.5rem 1.25rem',
+    backgroundColor: '#edf2f7',
+    color: '#4a5568',
+    border: '1.5px solid #cbd5e0',
+    borderRadius: '2rem',
+    fontWeight: 600,
+    fontSize: '0.875rem',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
+};
+
+// Overrides applied when Focus Mode is ON
+const focusStyles: Record<string, React.CSSProperties> = {
+  page: {
+    minHeight: '100vh',
+    backgroundColor: '#fafaf8',   // warm off-white — less glare
+    fontFamily: "'Inter', system-ui, sans-serif",
+    color: '#2d3748',
+    padding: '2rem',
+    maxWidth: '680px',             // narrower column = less to scan
+    margin: '0 auto',
+    transition: 'all 0.3s ease',
+  },
+  header: {
+    textAlign: 'center' as const,
+    marginBottom: '1.5rem',
+    paddingBottom: '1rem',
+    borderBottom: '1px solid #e2e8f0',  // thinner divider
+  },
+  toggleBtn: {
+    marginTop: '1rem',
+    padding: '0.5rem 1.25rem',
+    backgroundColor: '#2d3748',
+    color: '#f7fafc',
+    border: 'none',
+    borderRadius: '2rem',
+    fontWeight: 600,
+    fontSize: '0.875rem',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
 };
 
 export default AutismPage;
