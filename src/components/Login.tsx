@@ -88,33 +88,7 @@ const Login: React.FC = () => {
           Don't have an account? <Link to="/register" style={{ color: 'var(--accent-color)' }}>Register here</Link>.
         </p>
 
-        {/*
-         * ─────────────────────────────────────────────
-         * TEMPORARY DIAGNOSTIC BUTTONS
-         * ─────────────────────────────────────────────
-         * In the future production version, these buttons will be removed.
-         * The user will ONLY use their Email/Password above. Once authenticated, 
-         * we read their `disabilityProfile` from Firestore (detected by the ML model 
-         * during /onboarding) and automatically navigate them to the correct 
-         * tailored learning interface without them ever needing to manually choose.
-         */}
-        <div className="mt-8 pt-6 border-t border-gray-200 w-full flex flex-col gap-2">
-          <p className="text-sm font-bold text-center text-gray-500 mb-2 uppercase tracking-wider">
-            Temporary Direct Routes
-          </p>
-          <button type="button" onClick={() => navigate('/learning-disability')} className="btn" style={{backgroundColor: '#4a5568'}}>
-            1. Learning Disability
-          </button>
-          <button type="button" onClick={() => navigate('/physical-disability')} className="btn" style={{backgroundColor: '#4a5568'}}>
-            2. Physical Disability
-          </button>
-          <button type="button" onClick={() => navigate('/visual-impairment')} className="btn" style={{backgroundColor: '#4a5568'}}>
-            3. Visual Impairment
-          </button>
-          <button type="button" onClick={() => navigate('/adhd-autism')} className="btn" style={{backgroundColor: '#2b6cb0'}}>
-            4. ADHD/AUTISM
-          </button>
-        </div>
+
       </div>
     </div>
   );
