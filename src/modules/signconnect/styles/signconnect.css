@@ -1,0 +1,79 @@
+/* SignConnect Module Styles */
+
+.signconnect-container {
+  min-height: 100vh;
+  background-color: #0f172a;
+  color: #f8fafc;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.glass-card {
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.5rem;
+}
+
+.camera-preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4/3;
+  background: #000;
+  border-radius: 1rem;
+  overflow: hidden;
+  border: 2px solid #3b82f6;
+}
+
+.gesture-overlay {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(59, 130, 246, 0.9);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 700;
+  font-size: 0.875rem;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.chat-bubble {
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  margin-bottom: 0.5rem;
+  max-width: 80%;
+}
+
+.chat-bubble.user {
+  background: #3b82f6;
+  color: white;
+  align-self: flex-end;
+  border-bottom-right-radius: 0.25rem;
+}
+
+.chat-bubble.ai {
+  background: #334155;
+  color: #f8fafc;
+  align-self: flex-start;
+  border-bottom-left-radius: 0.25rem;
+}
+
+.category-pill {
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.category-pill:hover {
+  background: #334155;
+  border-color: #475569;
+}
+
+.category-pill.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+}

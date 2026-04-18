@@ -39,6 +39,7 @@ import VisualImpairment from './components/pages/VisualImpairment';
 import AdhdPage from './components/adhd/AdhdPage';
 import AutismPage from './components/adhd/AutismPage';
 import AdminDashboard from './components/admin/AdminDashboard';
+import SignConnect from './modules/signconnect/pages/SignConnect';
 
 function App() {
   return (
@@ -62,6 +63,7 @@ function App() {
           <Route path="/visual-impairment" element={<VisualImpairment />} />
           <Route path="/adhd" element={<AdhdPage onBack={() => window.location.href = '/home'} />} />
           <Route path="/autism" element={<AutismPage onBack={() => window.location.href = '/home'} />} />
+          <Route path="/physical-disability/signconnect" element={<SignConnect />} />
 
           {/* Admin route */}
           <Route path="/admin" element={<AdminDashboard />} />
