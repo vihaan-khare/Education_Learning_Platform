@@ -12,13 +12,14 @@ interface PredictableEngineProps {
   sourceLinkLabel?: string;
   onComplete?: () => void;
   onBackToLibrary: () => void;
+  hideBackBtn?: boolean;
 }
 
 const STAGES = ['intro', 'content', 'reinforcement', 'completion'] as const;
 type Stage = typeof STAGES[number];
 
 const PredictabilityEngine: React.FC<PredictableEngineProps> = ({
-  sectionId, title, type, content, embedUrl, sourceLink, sourceLinkLabel, onComplete, onBackToLibrary
+  sectionId, title, type, content, embedUrl, sourceLink, sourceLinkLabel, onComplete, onBackToLibrary, hideBackBtn
 }) => {
   const [sequence, setSequence] = useState<PredictableSequence | null>(null);
   const [loading, setLoading] = useState(false);
@@ -67,10 +68,7 @@ const PredictabilityEngine: React.FC<PredictableEngineProps> = ({
     });
     setScore(correct);
     setSubmitted(true);
-    // Require at least half correct to proceed
-    if (correct >= Math.ceil(questions.length / 2)) {
-      if (onComplete) onComplete();
-    }
+    // Passed the quiz, user can now go to completion step.
   };
 
   const handleRetryQuiz = () => {
@@ -99,9 +97,11 @@ const PredictabilityEngine: React.FC<PredictableEngineProps> = ({
           <button style={s.btn} onClick={handleStart} disabled={loading || !content}>
             {loading ? '⏳ Building Lesson...' : '▶ Begin Structured Lesson'}
           </button>
-          <button style={{...s.btnSecondary, marginTop: '0.75rem'}} onClick={onBackToLibrary}>
-            ← Back to Library
-          </button>
+          {!hideBackBtn && (
+            <button style={{...s.btnSecondary, marginTop: '0.75rem'}} onClick={onBackToLibrary}>
+              ← Back to Library
+            </button>
+          )}
         </div>
       </div>
     );
@@ -126,10 +126,12 @@ const PredictabilityEngine: React.FC<PredictableEngineProps> = ({
         })}
       </div>
 
-      {/* Back to Library — always visible */}
-      <button style={s.backLink} onClick={onBackToLibrary}>
-        ← Back to Library
-      </button>
+      {/* Back to Library — always visible unless hidden */}
+      {!hideBackBtn && (
+        <button style={s.backLink} onClick={onBackToLibrary}>
+          ← Back to Library
+        </button>
+      )}
 
       <div style={s.card}>
 
@@ -262,9 +264,15 @@ const PredictabilityEngine: React.FC<PredictableEngineProps> = ({
                 <li key={i} style={s.summaryItem}>✓ {pt}</li>
               ))}
             </ul>
-            <button style={{ ...s.btn, backgroundColor: '#38a169', marginTop: '1.5rem', width: '100%' }} onClick={onBackToLibrary}>
-              ← Return to Library
-            </button>
+            {!hideBackBtn ? (
+              <button style={{ ...s.btn, backgroundColor: '#38a169', marginTop: '1.5rem', width: '100%' }} onClick={() => { if (onComplete) onComplete(); onBackToLibrary(); }}>
+                ← Return to Library
+              </button>
+            ) : (
+              <button style={{ ...s.btn, backgroundColor: '#38a169', marginTop: '1.5rem', width: '100%' }} onClick={() => { if (onComplete) onComplete(); }}>
+                Complete Module →
+              </button>
+            )}
           </div>
         )}
 

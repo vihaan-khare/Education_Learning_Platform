@@ -88,32 +88,37 @@ OUTPUT ONLY VALID JSON. No markdown wrappers.`;
 /**
  * Fallback local generator if Gemini is unavailable
  */
-function getFallbackSequence(contentType: 'video' | 'article'): PredictableSequence {
+function getFallbackSequence(contentType: 'video' | 'article', content: string): PredictableSequence {
+  // Simple heuristic to extract a pseudo-topic from the content for the mock quiz
+  const words = content.split(' ').filter(w => w.length > 5);
+  const keyword1 = words[Math.floor(Math.random() * Math.min(words.length, 10))] || 'the main topic';
+  const keyword2 = words[Math.floor(Math.random() * Math.min(words.length, 20))] || 'this concept';
+  
   return {
     intro: {
       title: "Welcome to the Lesson",
-      text: `We are going to learn about this topic today. Please get ready to focus.`
+      text: `We are going to learn about "${keyword1}" and related ideas today. Please get ready to focus.`
     },
     contentInstructions: {
       title: contentType === 'video' ? "Watch the Video" : "Read the Article",
-      text: `Please pay close attention to the main themes.`
+      text: `Please pay close attention to the explanations surrounding ${keyword2}.`
     },
     reinforcement: {
-      title: "Knowledge Check",
+      title: "Knowledge Check (Mock AI)",
       quizQuestions: [
         {
-          question: "What is the main topic covered in this lesson?",
-          options: ["The environment", "The featured educational topic", "History of science", "Mathematics"],
+          question: `Based on the lesson, what is the best way to define "${keyword1}"?`,
+          options: ["It is unrelated to the topic", `It represents a core part of ${keyword2}`, "It is only a historical footnote", "It has no meaning here"],
           correctIndex: 1
         },
         {
-          question: "Why is it important to understand this topic?",
-          options: ["It is not important", "For entertainment only", "To better understand how people learn and think", "To pass a test"],
+          question: `Why is it important to understand the concept of ${keyword2}?`,
+          options: ["It is not important", "For entertainment only", "To better understand the structural foundations of this lesson", "To pass a test"],
           correctIndex: 2
         },
         {
-          question: "What should you do if you want to learn more?",
-          options: ["Ignore the topic", "Follow the source links provided", "Give up", "Watch unrelated videos"],
+          question: "When reviewing this material, what should you focus on?",
+          options: ["Ignore the details", `How ${keyword1} connects to the larger picture`, "Give up", "Watch unrelated videos"],
           correctIndex: 1
         }
       ]
@@ -121,9 +126,9 @@ function getFallbackSequence(contentType: 'video' | 'article'): PredictableSeque
     completion: {
       title: "Excellent Progress!",
       summaryPoints: [
-        "You completed the lesson.",
+        `You completed the lesson on ${keyword1}.`,
         "You practiced focusing.",
-        "You're ready for the next step."
+        "You answered the mock dynamic questions successfully!"
       ]
     }
   };
@@ -155,7 +160,7 @@ export async function generatePredictableSequence(
   }
 
   console.log('[PredictabilityEngine] Using fallback sequence.');
-  return getFallbackSequence(contentType);
+  return getFallbackSequence(contentType, content);
 }
 
 export interface ValidationResult {

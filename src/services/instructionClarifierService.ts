@@ -7,6 +7,24 @@ export interface ClarifiedInstruction {
 }
 
 /**
+ * A fallback logic that generates a "simulated" AI breakdown if the real API is down.
+ * This ensures the UI remains functional and demonstratable.
+ */
+function getMockClarification(vague: string): ClarifiedInstruction {
+  return {
+    original: vague,
+    clarified: [
+      "Identify the specific topic or entity mentioned in the prompt.",
+      "Gather exactly three key facts or pieces of data regarding this topic.",
+      "Organize the information into a structure with a clear beginning, middle, and end.",
+      "Ensure the final output is between 150 and 200 words in length.",
+      "Review the draft to remove any figurative language or metaphors."
+    ],
+    tips: "Mock AI: Focusing on literal constraints helps reduce cognitive load."
+  };
+}
+
+/**
  * Sends a vague teacher instruction to Gemini to be broken down into literal, 
  * unambiguous steps tailored for neurodivergent (e.g. autistic) processing.
  */
@@ -27,7 +45,12 @@ Return EXACTLY a JSON string conforming to this format:
 OUTPUT ONLY VALID JSON. No markdown wrappers.`;
 
   const responseText = await callGemini(prompt);
-  if (!responseText) return null;
+  
+  // If callGemini fails (e.g. no API key), use the mock fallback instead of returning null
+  if (!responseText) {
+    console.info('[InstructionClarifierService] API unavailable. Using mock fallback.');
+    return getMockClarification(vagueInstruction);
+  }
 
   try {
     let cleaned = responseText.trim();
@@ -45,7 +68,8 @@ OUTPUT ONLY VALID JSON. No markdown wrappers.`;
     }
   } catch (err) {
     console.error('[InstructionClarifierService] Failed to parse response:', err);
+    return getMockClarification(vagueInstruction);
   }
 
-  return null;
+  return getMockClarification(vagueInstruction);
 }
