@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAdminCourses } from '../../hooks/useAdminCourses';
 import type { AdminCourse } from '../../hooks/useAdminCourses';
 import StepExpectationCard from '../adhd/StepExpectation';
@@ -91,6 +92,19 @@ const LearningLibrary: React.FC<LearningLibraryProps> = ({
       chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isVoiceMode]);
+
+  // ── Auto-enable voice mode if navigated here with ?voice=true ──
+  const location = useLocation();
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('voice') === 'true') {
+      setIsVoiceMode(true);
+      // Greet the user via TTS immediately
+      setTimeout(() => {
+        speak(`Welcome to the ${title} learning environment. Voice Assistant is now active. You can say "Open course", "Read section", or ask me any question.`);
+      }, 800);
+    }
+  }, []);
 
   // Admin items from Firestore
   const { courses: adminItems } = useAdminCourses(profile);

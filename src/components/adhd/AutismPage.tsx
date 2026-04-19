@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import PredictabilityEngine from './PredictabilityEngine';
 import InstructionClarifier from './InstructionClarifier';
 import StepExpectationCard from './StepExpectation';
@@ -284,6 +285,18 @@ const AutismPage: React.FC<AutismPageProps> = ({ onBack }) => {
   React.useEffect(() => {
     stateRef.current = { selectedCourseId, activeSection, allCourses, messages };
   }, [selectedCourseId, activeSection, allCourses, messages]);
+
+  // ── Auto-enable Voice if navigated here with ?voice=true ──
+  const location = useLocation();
+  React.useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('voice') === 'true') {
+      setIsVoiceMode(true);
+      setTimeout(() => {
+        speak('Welcome to the Autism Learning Library. Voice Assistant is now active. You can say "Open course", "Read section", or ask me any question.');
+      }, 800);
+    }
+  }, []);
 
   const startListening = React.useCallback(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -729,7 +742,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "'Inter', system-ui, sans-serif",
     color: '#2d3748',
     padding: '2rem',
-    maxWidth: '900px',
+    maxWidth: '1200px',
     margin: '0 auto',
   },
   header: {
@@ -751,13 +764,13 @@ const styles: Record<string, React.CSSProperties> = {
   },
   catalogGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-    gap: '1.5rem',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+    gap: '2rem',
     marginTop: '2rem'
   },
   courseCardOverview: {
     backgroundColor: '#ffffff',
-    borderRadius: '1rem',
+    borderRadius: '1.5rem',
     padding: '2rem',
     border: '1px solid #e2e8f0',
     boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
@@ -832,13 +845,13 @@ const styles: Record<string, React.CSSProperties> = {
   },
   backButton: {
     background: 'none',
-    border: 'none',
+    border: '2px solid #e2e8f0',
     color: '#4299e1',
-    fontWeight: 'bold',
+    fontWeight: 700,
     cursor: 'pointer',
-    marginBottom: '1.5rem',
-    padding: 0,
-    fontSize: '1rem'
+    padding: '0.75rem 1.5rem',
+    borderRadius: '50px',
+    fontSize: '0.95rem',
   },
   tabBar: {
     display: 'flex',
@@ -870,7 +883,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   contentCard: {
     backgroundColor: '#ffffff',
-    borderRadius: '0.75rem',
+    borderRadius: '1.5rem',
     overflow: 'hidden',
     border: '1px solid #e2e8f0',
     boxShadow: '0 1px 3px rgba(0,0,0,0.06)',

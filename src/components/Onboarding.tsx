@@ -16,6 +16,13 @@ const Onboarding: React.FC = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [userInput, setUserInput] = useState('');
   const [pendingProfile, setPendingProfile] = useState<string | null>(null);
+  // Dual-disability: holds { visualRoute, otherProfile, otherRoute, otherName } when detected
+  const [pendingDualChoice, setPendingDualChoice] = useState<{
+    visualRoute: string;
+    otherProfile: string;
+    otherRoute: string;
+    otherName: string;
+  } | null>(null);
 
   // Voice to text state
   const [isListening, setIsListening] = useState(false);
@@ -192,6 +199,39 @@ const Onboarding: React.FC = () => {
       return;
     }
 
+    // ── Dual-disability page choice handler ──────────────────────────────
+    if (pendingDualChoice) {
+      const lower = currentInput.toLowerCase();
+      const choseVisual = lower.match(/\b(1|one|visual|blind|vision|sight)\b/);
+      const choseOther  = lower.match(/\b(2|two|other|second|dyslexia|adhd|autism|learning|focus|sensory)\b/);
+
+      if (choseVisual) {
+        addAiMessage(`Taking you to the Visual Impairment page now.`);
+        setTimeout(async () => {
+          applyProfileSettings('visual');
+          if (auth.currentUser) {
+            try { await updateDoc(doc(db, 'users', auth.currentUser.uid), { disabilityProfile: 'visual' }); } catch {}
+          }
+          navigate('/visual-impairment');
+        }, 2000);
+      } else if (choseOther) {
+        const { otherProfile, otherRoute, otherName } = pendingDualChoice;
+        addAiMessage(`Taking you to the ${otherName} page. Voice narration will be automatically activated to help you navigate.`);
+        setTimeout(async () => {
+          applyProfileSettings(otherProfile as any);
+          if (auth.currentUser) {
+            try { await updateDoc(doc(db, 'users', auth.currentUser.uid), { disabilityProfile: otherProfile }); } catch {}
+          }
+          navigate(`${otherRoute}?voice=true`);
+        }, 2500);
+      } else {
+        addAiMessage(`I didn't catch that. Please say "1" or "Visual" for the Visual Impairment page, or "2" or the name of your other condition for the ${pendingDualChoice.otherName} page.`);
+        return;
+      }
+      setPendingDualChoice(null);
+      return;
+    }
+
     setIsTyping(true);
 
     // Use Keyword Matching first, and use Gemini LLM as a fallback
@@ -285,6 +325,49 @@ Reply with ONLY valid JSON, no markdown fences, no explanation:
 
     classifyWithLLM().then(({ profile, response }) => {
       setIsTyping(false);
+
+      // ── Dual Disability Detection ─────────────────────────────────────────
+      // Recalculate keyword scores locally to check for dual match using word boundaries
+      const inputLower = currentInput.toLowerCase()
+        .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'")
+        .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"');
+      
+      const scoreWordMatch = (words: string[]) => {
+        return words.filter(w => {
+           // Create a safe regex for the word/phrase
+           const escaped = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+           return new RegExp(`\\b${escaped}\\b`, 'i').test(inputLower);
+        }).length;
+      };
+
+      const visualScore = scoreWordMatch(visualWords);
+      const adhdScore = scoreWordMatch(adhdWords);
+      const autismScore = scoreWordMatch(autismWords);
+      const learningScore = scoreWordMatch(dyslexiaWords);
+
+      // Map of other profiles (excluding physical/hearing since that doesn't need voice handoff)
+      const otherScores: [string, number, string, string][] = [
+        ['adhd',     adhdScore,     '/adhd',     'ADHD'],
+        ['autism',   autismScore,   '/autism',   'Autism'],
+        ['learning', learningScore, '/dyslexia', 'Dyslexia'],
+      ];
+      const topOther = otherScores.sort((a, b) => b[1] - a[1])[0];
+
+      // If visual is scored AND another profile is also scored
+      if (visualScore >= 1 && topOther[1] >= 1) {
+        const otherProfile = topOther[0];
+        const otherRoute = topOther[2];
+        const otherName = topOther[3];
+        const msg = `I can see you may be dealing with both visual impairment and ${otherName}. We have two specialized learning environments that could help you:\n\n` +
+          `1️⃣  Visual Impairment — Full screen reader, high contrast, voice-first navigation\n` +
+          `2️⃣  ${otherName} — Specialized ${otherName} tools with Voice Assistant auto-enabled\n\n` +
+          `Which would you prefer? Say "1" or "Visual" for option 1, or "2" or "${otherName}" for option 2.`;
+        addAiMessage(msg);
+        setPendingDualChoice({ visualRoute: '/visual-impairment', otherProfile, otherRoute, otherName });
+        return;
+      }
+
+      // ── Standard single-profile routing ──────────────────────────────────
       const profileNames: Record<string, string> = {
         visual: 'Visual Impairment',
         adhd: 'ADHD',

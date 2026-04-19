@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   ArrowLeft, 
   Upload, 
@@ -51,6 +51,22 @@ const PhysicalDisability: React.FC = () => {
   const messagesRef = useRef(voiceMessages);
   useEffect(() => { messagesRef.current = voiceMessages; }, [voiceMessages]);
   useEffect(() => { if (isVoiceMode) chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [voiceMessages, isVoiceMode]);
+
+  // ── Auto-enable voice if navigated here with ?voice=true ──
+  const location = useLocation();
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('voice') === 'true') {
+      setIsVoiceMode(true);
+      setTimeout(() => {
+        const synth = window.speechSynthesis;
+        synth.cancel();
+        const u = new SpeechSynthesisUtterance('Welcome to the Physical Accessibility learning environment. Voice Assistant is now active. You can ask me any questions about your learning materials.');
+        u.rate = 0.9;
+        synth.speak(u);
+      }, 800);
+    }
+  }, []);
 
   const startListening = useCallback(() => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
