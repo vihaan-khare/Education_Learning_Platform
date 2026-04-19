@@ -484,7 +484,7 @@ const VisualImpairment: React.FC = () => {
                   <div key={m.id} style={S.moduleCard} onClick={() => setSelectedCourseId(m.id)}>
                     <span style={S.moduleIcon} aria-hidden="true">{m.icon}</span>
                     <h3 style={S.moduleTitle}>{m.title}</h3>
-                    <p style={S.moduleDesc}>{m.desc}</p>
+                    <p style={S.moduleDesc}>{m.description}</p>
                     <span style={S.voiceHint}>Say "Open {m.title}"</span>
                   </div>
                 ))}

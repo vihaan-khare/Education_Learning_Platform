@@ -13,7 +13,7 @@ export const useSwitchScanner = ({
 }: SwitchScannerOptions) => {
   const [currentIndex, setCurrentIndex] = useState(-1);
   const elementsRef = useRef<HTMLElement[]>([]);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Refresh the list of scan targets
   const refreshTargets = useCallback(() => {

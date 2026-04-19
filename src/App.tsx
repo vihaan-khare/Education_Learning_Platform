@@ -21,7 +21,7 @@
  * The redirect is automatic and seamless via profileRoutes.ts.
  */
 
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AccessibilityProvider } from './context/AccessibilityContext';
 import WelcomeGate from './components/WelcomeGate';
 import Onboarding from './components/Onboarding';
