@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAccessibility } from '../context/AccessibilityContext';
+import { useAccessibility } from '../hooks/useAccessibility';
 import { auth, db } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { getRouteForProfile } from '../utils/profileRoutes';

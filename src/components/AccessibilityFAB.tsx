@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Settings, Eye, EyeOff, Type, Volume2, Maximize } from 'lucide-react';
-import { useAccessibility } from '../context/AccessibilityContext';
+import { useAccessibility } from '../hooks/useAccessibility';
 
 const AccessibilityFAB: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);

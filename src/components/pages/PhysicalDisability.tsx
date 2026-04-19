@@ -206,7 +206,20 @@ const PhysicalDisability: React.FC = () => {
       <div style={{ display: 'flex', gap: '2rem', maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
       <main style={{ flex: 1 }}>
         {/* Navigation to SignConnect Module (Always Visible) */}
-        <div className="mb-8 flex justify-end animate-in fade-in slide-in-from-right-4 duration-500">
+        <div className="mb-8 flex justify-end gap-4 animate-in fade-in slide-in-from-right-4 duration-500">
+          <button 
+            onClick={() => navigate('/physical-disability/quadriplegia')}
+            className="flex items-center gap-4 bg-[#df6eff]/10 border border-[#df6eff]/30 text-on-surface px-6 py-3 rounded-2xl hover:bg-[#df6eff]/20 transition-all group shadow-lg"
+          >
+            <div className="w-8 h-8 bg-[#df6eff] rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-md">
+              <span className="material-symbols-outlined text-white text-sm" style={{fontVariationSettings: "'FILL' 1"}}>accessibility_new</span>
+            </div>
+            <div className="text-left">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#df6eff]">Hands-Free Module</p>
+              <p className="font-bold text-base">Quadriplegia Lab</p>
+            </div>
+          </button>
+          
           <button 
             onClick={() => navigate('/physical-disability/signconnect')}
             className="flex items-center gap-4 bg-primary/10 border border-primary/30 text-on-surface px-6 py-3 rounded-2xl hover:bg-primary/20 transition-all group shadow-lg"

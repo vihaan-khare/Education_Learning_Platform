@@ -1,21 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-
-type Theme = 'default' | 'dyslexia' | 'sensory' | 'high-contrast';
-type DisabilityProfile = 'none' | 'learning' | 'hearing' | 'physical' | 'adhd' | 'visual' | 'autism';
-
-interface AccessibilityState {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
-  distractionFree: boolean;
-  setDistractionFree: (value: boolean) => void;
-  ttsEnabled: boolean;
-  setTtsEnabled: (value: boolean) => void;
-  profile: DisabilityProfile;
-  setProfile: (profile: DisabilityProfile) => void;
-  applyProfileSettings: (profile: DisabilityProfile) => void;
-}
-
-const AccessibilityContext = createContext<AccessibilityState | undefined>(undefined);
+import React, { useState, useEffect, type ReactNode } from 'react';
+import { AccessibilityContext, type Theme, type DisabilityProfile } from './AccessibilityContextCore';
 
 export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>('default');
@@ -48,7 +32,7 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
         setDistractionFree(false);
         break;
       case 'physical':
-        setTheme('default'); // Focus more on keyboard nav, handled by CSS and semantics
+        setTheme('default');
         setTtsEnabled(false);
         setDistractionFree(false);
         break;
@@ -87,12 +71,4 @@ export const AccessibilityProvider: React.FC<{ children: ReactNode }> = ({ child
       {children}
     </AccessibilityContext.Provider>
   );
-};
-
-export const useAccessibility = () => {
-  const context = useContext(AccessibilityContext);
-  if (context === undefined) {
-    throw new Error('useAccessibility must be used within an AccessibilityProvider');
-  }
-  return context;
 };
