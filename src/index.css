@@ -190,3 +190,27 @@ h1, h2, h3, h4, h5, h6 {
   background-color: rgba(251, 191, 36, 0.4);
   border-radius: 4px;
 }
+
+/* --- Switch Scanning UI --- */
+.scan-highlight {
+  outline: 4px solid #00F0FF !important;
+  outline-offset: 4px;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.7);
+  border-radius: var(--radius-base);
+  transition: all 0.2s ease-in-out;
+  position: relative;
+  z-index: 50;
+  animation: pulse-border 1.5s infinite alternate;
+}
+
+@keyframes pulse-border {
+  from { box-shadow: 0 0 10px rgba(0, 240, 255, 0.5); }
+  to { box-shadow: 0 0 25px rgba(0, 240, 255, 1); }
+}
+
+.scan-selected {
+  outline: 4px solid #df6eff !important;
+  background-color: rgba(223, 110, 255, 0.3) !important;
+  transform: scale(0.95);
+  transition: all 0.1s;
+}

@@ -1,26 +1,3 @@
-/**
- * App.tsx — Root application component
- * 
- * ROUTING FLOW:
- *   / (root)            → Redirects to /login
- *   /login              → Login page
- *   /register           → Registration page
- *   /onboarding         → AI disability detection (camera + ML)
- *   
- *   After detection/login, the user is routed to ONE of these pages
- *   based on their stored 'disabilityProfile' in Firestore:
- *     /dyslexia             → For 'learning' profile
- *     /physical-disability  → For 'physical' profile
- *     /visual-impairment    → For 'visual' profile
- *     /adhd-autism           → For 'adhd' or 'autism' profile
- * 
- *   /dashboard          → Legacy dashboard (Coming Soon placeholder)
- *   /course/:courseId    → Legacy course player
- * 
- * The user does NOT see which disability page they are on.
- * The redirect is automatic and seamless via profileRoutes.ts.
- */
-
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AccessibilityProvider } from './context/AccessibilityContext';
 import WelcomeGate from './components/WelcomeGate';
@@ -35,11 +12,12 @@ import HomePage from './components/HomePage';
 // Disability-specific pages (user doesn't know which one they are on)
 import Dyslexia from './components/pages/Dyslexia';
 import PhysicalDisability from './components/pages/PhysicalDisability';
+import QuadriplegiaLab from './components/pages/QuadriplegiaLab';
 import VisualImpairment from './components/pages/VisualImpairment';
 import AdhdPage from './components/adhd/AdhdPage';
 import AutismPage from './components/adhd/AutismPage';
 import AdminDashboard from './components/admin/AdminDashboard';
-import SignConnect from './modules/signconnect/pages/SignConnect';
+import SignConnect from './modules/signconnect/pages/SignConnect.jsx';
 
 function App() {
   return (
@@ -60,6 +38,7 @@ function App() {
           {/* Disability-specific pages — routed automatically after login */}
           <Route path="/dyslexia" element={<Dyslexia />} />
           <Route path="/physical-disability" element={<PhysicalDisability />} />
+          <Route path="/physical-disability/quadriplegia" element={<QuadriplegiaLab />} />
           <Route path="/visual-impairment" element={<VisualImpairment />} />
           <Route path="/adhd" element={<AdhdPage onBack={() => window.location.href = '/home'} />} />
           <Route path="/autism" element={<AutismPage onBack={() => window.location.href = '/home'} />} />
