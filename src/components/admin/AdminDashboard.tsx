@@ -22,7 +22,7 @@ import {
   type AdminUser,
   type GlobalActivityEntry,
 } from '../../services/activityService';
-import { visualWords, adhdWords, autismWords, physicalWords, learningWords } from '../../utils/symptoms';
+import { visualWords, adhdWords, autismWords, physicalWords, dyslexiaWords } from '../../utils/symptoms';
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
@@ -52,7 +52,7 @@ async function classifyCourse(title: string, desc: string): Promise<{ profile: P
     adhd: hit(adhdWords),
     autism: hit(autismWords),
     physical: hit(physicalWords),
-    learning: hit(learningWords),
+    learning: hit(dyslexiaWords),
   };
 
   const best = (Object.entries(scores) as [Profile, number][]).sort((a, b) => b[1] - a[1])[0];

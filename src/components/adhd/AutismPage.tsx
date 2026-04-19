@@ -11,6 +11,23 @@ import InstructionClarifier from './InstructionClarifier';
 import StepExpectationCard from './StepExpectation';
 import { useAdminCourses } from '../../hooks/useAdminCourses';
 import type { AdminCourse } from '../../hooks/useAdminCourses';
+import { askGemini } from '../../utils/geminiChat';
+import type { Message } from '../../utils/geminiChat';
+
+// TTS Helpers
+function speak(text: string, onEnd?: () => void): void {
+  const synth = window.speechSynthesis;
+  synth.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 0.9;
+  u.pitch = 1;
+  u.volume = 1;
+  if (onEnd) u.onend = onEnd;
+  synth.speak(u);
+}
+function stopSpeaking(): void {
+  window.speechSynthesis.cancel();
+}
 
 interface CourseSectionType {
   id: string;
@@ -248,6 +265,156 @@ const AutismPage: React.FC<AutismPageProps> = ({ onBack }) => {
     }
   }, [completedCount, totalCourseItems, selectedCourseId]);
 
+  // ── Voice Assistant State & Logic ──
+  const [isVoiceMode, setIsVoiceMode] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [listening, setListening] = useState(false);
+  const [thinking, setThinking] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const recognitionRef = React.useRef<any>(null);
+  const chatBottomRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (isVoiceMode) {
+      chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isVoiceMode]);
+
+  const stateRef = React.useRef({ selectedCourseId, activeSection, allCourses, messages });
+  React.useEffect(() => {
+    stateRef.current = { selectedCourseId, activeSection, allCourses, messages };
+  }, [selectedCourseId, activeSection, allCourses, messages]);
+
+  const startListening = React.useCallback(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+    stopSpeaking();
+    const rec = new SpeechRecognition();
+    rec.continuous = false;
+    rec.interimResults = true;
+    rec.lang = 'en-US';
+    rec.onstart = () => setListening(true);
+    rec.onend = () => setListening(false);
+    rec.onresult = (event: any) => {
+      const result = Array.from(event.results as SpeechRecognitionResultList).map((r: any) => r[0].transcript).join('');
+      setTranscript(result);
+      if (event.results[event.results.length - 1].isFinal) {
+        handleUserMessage(result.trim());
+        setTranscript('');
+      }
+    };
+    rec.onerror = () => setListening(false);
+    recognitionRef.current = rec;
+    try { rec.start(); } catch (e) {}
+  }, []);
+
+  const stopListening = React.useCallback(() => {
+    recognitionRef.current?.stop();
+    setListening(false);
+  }, []);
+
+  const processVoiceCommand = (text: string): boolean => {
+    const lower = text.toLowerCase();
+    if (lower.match(/^(stop|silence|pause|quiet|shut up|hush)$/)) {
+      stopSpeaking();
+      return true;
+    }
+
+    const { selectedCourseId, activeSection, allCourses } = stateRef.current;
+
+    if (lower.includes('go back') || lower.includes('close') || (lower.match(/^(home|back)$/))) {
+      if (selectedCourseId) {
+        setSelectedCourseId(null);
+        const txt = "Returning to course list.";
+        setMessages(prev => [...prev, { sender: 'ai', text: txt }]);
+        speak(txt);
+        return true;
+      }
+    }
+
+    if (lower.startsWith('open ') || lower.startsWith('select ')) {
+      const targetQuery = lower.replace(/^(open |select )/, '').trim();
+      let matchedCourse = null;
+      const matchNumber = targetQuery.match(/course\s+(\d+)/);
+      if (matchNumber && allCourses[parseInt(matchNumber[1]) - 1]) {
+        matchedCourse = allCourses[parseInt(matchNumber[1]) - 1];
+      } else {
+        const queryWords = targetQuery.split(/\s+/).filter(w => w.length > 3 || w === 'sr');
+        matchedCourse = allCourses.find(course => {
+          const title = course.title.toLowerCase();
+          if (title.includes(targetQuery)) return true;
+          return queryWords.some(word => title.includes(word));
+        });
+      }
+
+      if (matchedCourse) {
+        setSelectedCourseId(matchedCourse.id);
+        const txt = `Opening ${matchedCourse.title}.`;
+        setMessages(prev => [...prev, { sender: 'ai', text: txt }]);
+        speak(txt);
+        return true;
+      }
+    }
+
+    if (lower.includes('read section')) {
+      const { selectedCourseId, activeSection, allCourses } = stateRef.current;
+      if (selectedCourseId && activeSection) {
+        const course = allCourses.find(c => c.id === selectedCourseId);
+        const section = course?.sections.find(s => s.id === activeSection);
+        if (section && section.content) {
+          const txt = `Reading ${section.title}. ${section.content}`;
+          setMessages(prev => [...prev, { sender: 'ai', text: txt }]);
+          speak(txt);
+          return true;
+        }
+      }
+    }
+
+    return false;
+  };
+
+  const handleUserMessage = async (text: string) => {
+    if (!text) return;
+    const userMsg: Message = { sender: 'user', text };
+    setMessages(prev => [...prev, userMsg]);
+    const handledLocal = processVoiceCommand(text);
+    if (handledLocal) return;
+
+    setThinking(true);
+    const { messages: currentMessages } = stateRef.current;
+    const reply = await askGemini(text, [...currentMessages, userMsg]);
+    setThinking(false);
+    setMessages(prev2 => [...prev2, { sender: 'ai', text: reply }]);
+    speak(reply);
+  };
+
+  const renderVoicePanel = () => {
+    if (!isVoiceMode) return null;
+    return (
+      <aside style={{ width: '340px', backgroundColor: '#f8fafc', borderRadius: '1rem', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0, height: 'calc(100vh - 150px)', position: 'sticky', top: '2rem' }}>
+        <div style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0', backgroundColor: '#fff' }}>
+            <h2 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 800 }}>🎙️ Voice Assistant</h2>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {messages.map((m, i) => (
+              <div key={i} style={{ padding: '0.75rem', borderRadius: '0.75rem', maxWidth: '90%', fontSize: '0.95rem', lineHeight: 1.5, ...(m.sender === 'user' ? { backgroundColor: '#3b82f6', color: '#fff', alignSelf: 'flex-end' } : { backgroundColor: '#fff', border: '1px solid #e2e8f0', alignSelf: 'flex-start' }) }}>
+                {m.text}
+              </div>
+            ))}
+            {thinking && <div style={{ padding: '0.75rem', borderRadius: '0.75rem', maxWidth: '90%', fontSize: '0.95rem', lineHeight: 1.5, backgroundColor: '#fff', border: '1px solid #e2e8f0', alignSelf: 'flex-start' }}>Thinking...</div>}
+            {transcript && <div style={{ padding: '0.75rem', borderRadius: '0.75rem', maxWidth: '90%', fontSize: '0.95rem', lineHeight: 1.5, backgroundColor: '#3b82f6', color: '#fff', alignSelf: 'flex-end', opacity: 0.6 }}>{transcript}</div>}
+            <div ref={chatBottomRef} />
+        </div>
+        <div style={{ padding: '1rem', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '0.5rem', backgroundColor: '#fff' }}>
+            <button style={{ flex: 1, padding: '0.75rem', borderRadius: '0.5rem', border: 'none', color: '#fff', fontWeight: 700, cursor: 'pointer', transition: '0.2s', ...(listening ? { backgroundColor: '#ef4444', animation: 'pulse 1.5s infinite' } : { backgroundColor: '#3b82f6' }) }} onClick={listening ? stopListening : startListening}>
+              {listening ? '⏹ Stop' : '🎤 Speak'}
+            </button>
+            <button style={{ padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0', backgroundColor: 'transparent', cursor: 'pointer', fontWeight: 600 }} onClick={stopSpeaking}>🔇 Silence</button>
+        </div>
+      </aside>
+    );
+  };
+
   useEffect(() => {
     const fetchArticle = async () => {
       try {
@@ -280,6 +447,14 @@ const AutismPage: React.FC<AutismPageProps> = ({ onBack }) => {
           <h1 style={styles.courseTitle}>Learning Library</h1>
           {!isFocusMode && <p style={styles.courseSubtitle}>Select a module to begin</p>}
 
+          {/* VOICE TOGGLE */}
+          <button 
+             style={{ ...styles.toggleBtn, marginRight: '1rem', backgroundColor: isVoiceMode ? '#3b82f6' : '#edf2f7', color: isVoiceMode ? '#fff' : '#000' }}
+             onClick={() => setIsVoiceMode(!isVoiceMode)}
+          >
+             🎙️ Voice Assistant
+          </button>
+          
           {/* FOCUS MODE TOGGLE */}
           <button
             onClick={() => setIsFocusMode(f => !f)}
@@ -288,83 +463,80 @@ const AutismPage: React.FC<AutismPageProps> = ({ onBack }) => {
             {isFocusMode ? '💡 Exit Focus Mode' : '🎯 Enter Focus Mode'}
           </button>
         </header>
-
-        {adminLoading && (
-          <div style={{ textAlign: 'center', padding: '1rem', color: '#718096', fontSize: '0.875rem' }}>
-            ⏳ Loading additional content…
-          </div>
-        )}
-
-        <div style={styles.catalogGrid}>
-          {allCourses.map(course => {
-            const hasSections = course.sections.length > 0;
-            const hasAssignments = course.assignments && course.assignments.length > 0;
-            
-            const totalCourseItems = course.sections.length + (course.assignments?.length || 0);
-            const courseCompletedCount = course.sections.filter(s => completedItems.has(`${course.id}-${s.id}`)).length +
-                (course.assignments?.filter((_, i) => completedItems.has(`${course.id}-assignment-${i}`)).length || 0);
-            const progressPct = totalCourseItems > 0 ? Math.round((courseCompletedCount / totalCourseItems) * 100) : 0;
-            const isAdminItem = course.id.startsWith('admin-course-');
-
-            return (
-              <div 
-                key={course.id} 
-                style={{
-                  ...styles.courseCardOverview,
-                  ...(isAdminItem ? { borderColor: '#4f46e5', borderWidth: 2 } : {})
-                }}
-                onClick={() => {
-                  if (hasSections || hasAssignments) {
-                    setSelectedCourseId(course.id);
-                    if (hasSections) {
-                      const mergedSections = course.sections.map(sec => 
-                        sec.id === 'article-neuro-wiki' && wikiContent
-                          ? { ...sec, content: wikiContent }
-                          : sec
-                      );
-                      setSections(mergedSections);
-                      setActiveSection(mergedSections[0].id);
-                    }
-                  } else {
-                    alert('This course module is coming soon!');
-                  }
-                }}
-              >
-                {isAdminItem && (
-                  <span style={{
-                    position: 'absolute', top: '0.75rem', left: '0.75rem',
-                    backgroundColor: '#4f46e5', color: '#fff',
-                    fontSize: '0.65rem', fontWeight: 700, padding: '0.15rem 0.5rem',
-                    borderRadius: '2rem', letterSpacing: '0.05em', textTransform: 'uppercase'
-                  }}>Admin</span>
-                )}
-                <div style={styles.courseIcon}>{course.icon}</div>
-                <h2 style={styles.courseCardTitle}>{course.title}</h2>
-                <p style={styles.courseCardDesc}>{course.description}</p>
+        <div style={{ display: 'flex', gap: '2rem' }}>
+          <div style={{ flex: 1 }}>
+            <div style={styles.catalogGrid}>
+              {allCourses.map(course => {
+                const hasSections = course.sections.length > 0;
+                const hasAssignments = course.assignments && course.assignments.length > 0;
                 
-                {/* EXPLICT PROGRESS UI FOR CARDS */}
-                {(hasSections || hasAssignments) && !completedCourses.has(course.id) && (
-                  <div style={{ width: '100%', marginTop: '1rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#718096', marginBottom: '0.25rem', fontWeight: 600 }}>
-                      <span>Step {courseCompletedCount} of {totalCourseItems}</span>
-                      <span>{progressPct}%</span>
-                    </div>
-                    <div style={{ backgroundColor: '#e2e8f0', borderRadius: '1rem', height: '0.5rem', width: '100%', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${progressPct}%`, backgroundColor: '#4299e1', transition: 'width 0.3s ease' }} />
-                    </div>
+                const totalCourseItems = course.sections.length + (course.assignments?.length || 0);
+                const courseCompletedCount = course.sections.filter(s => completedItems.has(`${course.id}-${s.id}`)).length +
+                    (course.assignments?.filter((_, i) => completedItems.has(`${course.id}-assignment-${i}`)).length || 0);
+                const progressPct = totalCourseItems > 0 ? Math.round((courseCompletedCount / totalCourseItems) * 100) : 0;
+                const isAdminItem = course.id.startsWith('admin-course-');
+
+                return (
+                  <div 
+                    key={course.id} 
+                    style={{
+                      ...styles.courseCardOverview,
+                      ...(isAdminItem ? { borderColor: '#4f46e5', borderWidth: 2 } : {})
+                    }}
+                    onClick={() => {
+                      if (hasSections || hasAssignments) {
+                        setSelectedCourseId(course.id);
+                        if (hasSections) {
+                          const mergedSections = course.sections.map(sec => 
+                            sec.id === 'article-neuro-wiki' && wikiContent
+                              ? { ...sec, content: wikiContent }
+                              : sec
+                          );
+                          setSections(mergedSections);
+                          setActiveSection(mergedSections[0].id);
+                        }
+                      } else {
+                        alert('This course module is coming soon!');
+                      }
+                    }}
+                  >
+                    {isAdminItem && (
+                      <span style={{
+                        position: 'absolute', top: '0.75rem', left: '0.75rem',
+                        backgroundColor: '#4f46e5', color: '#fff',
+                        fontSize: '0.65rem', fontWeight: 700, padding: '0.15rem 0.5rem',
+                        borderRadius: '2rem', letterSpacing: '0.05em', textTransform: 'uppercase'
+                      }}>Admin</span>
+                    )}
+                    <div style={styles.courseIcon}>{course.icon}</div>
+                    <h2 style={styles.courseCardTitle}>{course.title}</h2>
+                    <p style={styles.courseCardDesc}>{course.description}</p>
+                    
+                    {(hasSections || hasAssignments) && !completedCourses.has(course.id) && (
+                      <div style={{ width: '100%', marginTop: '1rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#718096', marginBottom: '0.25rem', fontWeight: 600 }}>
+                          <span>Step {courseCompletedCount} of {totalCourseItems}</span>
+                          <span>{progressPct}%</span>
+                        </div>
+                        <div style={{ backgroundColor: '#e2e8f0', borderRadius: '1rem', height: '0.5rem', width: '100%', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${progressPct}%`, backgroundColor: '#4299e1', transition: 'width 0.3s ease' }} />
+                        </div>
+                      </div>
+                    )}
+
+                    {completedCourses.has(course.id) && (
+                      <div style={styles.completedTag}>✓ Completed ({totalCourseItems}/{totalCourseItems} Steps)</div>
+                    )}
+
+                    {course.sections.length === 0 && (!course.assignments || course.assignments.length === 0) && (
+                      <span style={styles.comingSoonBadge}>Coming Soon</span>
+                    )}
                   </div>
-                )}
-
-                {completedCourses.has(course.id) && (
-                  <div style={styles.completedTag}>✓ Completed ({totalCourseItems}/{totalCourseItems} Steps)</div>
-                )}
-
-                {course.sections.length === 0 && (!course.assignments || course.assignments.length === 0) && (
-                  <span style={styles.comingSoonBadge}>Coming Soon</span>
-                )}
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          </div>
+          {renderVoicePanel()}
         </div>
       </div>
     );
@@ -376,11 +548,20 @@ const AutismPage: React.FC<AutismPageProps> = ({ onBack }) => {
   const progressPct = totalCourseItems > 0 ? Math.round((completedCount / totalCourseItems) * 100) : 0;
 
   return (
-    <div style={isFocusMode ? focusStyles.page : styles.page}>
+    <div style={{ display: 'flex', gap: '2rem' }}>
+    <div style={{ flex: 1, ...(isFocusMode ? focusStyles.page : styles.page) }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
         <button style={styles.backButton} onClick={() => setSelectedCourseId(null)}>
           ⬅ Home
         </button>
+        {/* VOICE TOGGLE inside course */}
+        <button 
+           style={{ ...styles.toggleBtn, marginRight: '1rem', backgroundColor: isVoiceMode ? '#3b82f6' : '#edf2f7', color: isVoiceMode ? '#fff' : '#000' }}
+           onClick={() => setIsVoiceMode(!isVoiceMode)}
+        >
+           🎙️ Voice Assistant
+        </button>
+
         {/* FOCUS MODE TOGGLE inside course */}
         <button
           onClick={() => setIsFocusMode(f => !f)}
@@ -535,6 +716,8 @@ const AutismPage: React.FC<AutismPageProps> = ({ onBack }) => {
           })}
         </div>
       )}
+    </div>
+    {renderVoicePanel()}
     </div>
   );
 };

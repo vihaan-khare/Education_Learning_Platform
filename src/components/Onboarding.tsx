@@ -1,20 +1,122 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAccessibility } from '../context/AccessibilityContext';
 import { auth, db } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { getRouteForProfile } from '../utils/profileRoutes';
-import { visualWords, adhdWords, autismWords, physicalWords, learningWords } from '../utils/symptoms';
+import { visualWords, adhdWords, autismWords, physicalWords, dyslexiaWords } from '../utils/symptoms';
 
 const Onboarding: React.FC = () => {
   const { applyProfileSettings } = useAccessibility();
   const navigate = useNavigate();
+  const location = useLocation();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const [messages, setMessages] = useState<{ sender: 'ai' | 'user', text: string }[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [userInput, setUserInput] = useState('');
   const [pendingProfile, setPendingProfile] = useState<string | null>(null);
+
+  // Voice to text state
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  // Setup Speech Recognition
+  useEffect(() => {
+    const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = (event: any) => {
+        const transcript = Array.from(event.results)
+          .map((result: any) => result[0].transcript)
+          .join('');
+        setUserInput(transcript);
+      };
+
+      recognition.onerror = (event: any) => {
+        console.error("Speech recognition error:", event.error);
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+    }
+  }, []);
+
+  // Auto-start if audio=true is in URL
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('audio') === 'true' && recognitionRef.current) {
+      setTimeout(() => {
+        try {
+          recognitionRef.current?.start();
+          setIsListening(true);
+        } catch (e) {}
+      }, 3000); // Wait for the initial greeting to speak a bit before listening
+    }
+  }, [location.search]);
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    } else {
+      try {
+        setUserInput(''); // Clear input before starting new recording
+        recognitionRef.current?.start();
+        setIsListening(true);
+      } catch (err) {
+        console.warn("Failed to start speech recognition:", err);
+      }
+    }
+  };
+
+  // Silence timer for auto-send
+  const silenceTimeoutRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (isListening && userInput.trim().length > 0) {
+      clearTimeout(silenceTimeoutRef.current);
+      
+      const lower = userInput.trim().toLowerCase();
+      
+      // Auto-send on "send", "yes", "no"
+      if (lower.endsWith(' send') || lower === 'send' || lower === 'yes' || lower === 'no') {
+        let finalInput = userInput.trim();
+        if (lower.endsWith(' send')) {
+          finalInput = finalInput.slice(0, -5).trim();
+        } else if (lower === 'send') {
+          // If they just said "send", ignore it, or maybe send whatever was previously captured? 
+          // But userInput is "send". This might be an empty message. We will just pass it, handleSend will ignore empty.
+        }
+
+        silenceTimeoutRef.current = setTimeout(() => {
+          recognitionRef.current?.stop();
+          setIsListening(false);
+          setUserInput(''); // Clear input box explicitly here just in case
+          handleSend(finalInput || lower);
+        }, 1000); // 1-second pause before triggering
+        return;
+      }
+
+      // 5-second silence auto-send
+      silenceTimeoutRef.current = setTimeout(() => {
+        recognitionRef.current?.stop();
+        setIsListening(false);
+        setUserInput('');
+        handleSend(userInput.trim());
+      }, 5000);
+    }
+    
+    return () => clearTimeout(silenceTimeoutRef.current);
+  }, [userInput, isListening]);
 
   // Helper to make the AI speak
   const speakMessage = (text: string, onEnd?: () => void) => {
@@ -95,7 +197,10 @@ const Onboarding: React.FC = () => {
     // Use Keyword Matching first, and use Gemini LLM as a fallback
     const classifyWithLLM = async (): Promise<{ profile: 'visual' | 'learning' | 'adhd' | 'autism' | 'physical', response: string }> => {
 
-      const inputLower = currentInput.toLowerCase();
+      // Normalize smart/curly apostrophes so keywords like "can't see" always match
+      const inputLower = currentInput.toLowerCase()
+        .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'")
+        .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"');
 
       // Score each profile by counting keyword hits
       const score = (words: string[]) => words.filter(w => inputLower.includes(w)).length;
@@ -105,12 +210,14 @@ const Onboarding: React.FC = () => {
         adhd: score(adhdWords),
         autism: score(autismWords),
         physical: score(physicalWords),
-        learning: score(learningWords),
+        learning: score(dyslexiaWords),
       };
 
       // Find the profile with the highest score
       const best = (Object.entries(scores) as [string, number][])
         .sort((a, b) => b[1] - a[1])[0];
+
+      console.log('[Aurora] Keyword scores:', scores, '| Best:', best[0], `(${best[1]})`);
 
       // If keywords match strongly, skip the LLM entirely
       if (best[1] > 0) {
@@ -118,7 +225,7 @@ const Onboarding: React.FC = () => {
           visual: 'Understood. Applying High Contrast mode and Text-to-Speech support. Stand by...',
           adhd: 'Got it. Applying the Sensory Focus profile to reduce distractions. Stand by...',
           autism: 'I understand. Applying the calm, low-stimulation Sensory Profile designed for your comfort. Stand by...',
-          physical: 'Understood. Applying accessibility controls for motor support. Stand by...',
+          physical: 'Understood. Applying accessibility controls and support for physical or hearing constraints. Stand by...',
           learning: 'Understood. Applying the Dyslexia support profile. Stand by...',
         };
         return { profile: best[0] as any, response: profileResponses[best[0]] };
@@ -129,9 +236,20 @@ const Onboarding: React.FC = () => {
 
       if (apiKey && apiKey !== 'your-gemini-api-key') {
         try {
-          const prompt = `Classify into ONE: visual,adhd,autism,learning,physical.
-Input:"${currentInput.slice(0, 150)}"
-Reply JSON only:{"profile":"...","response":"one sentence"}`;
+          const prompt = `You are an accessibility AI assistant. Classify the user's message into EXACTLY ONE of these five disability profiles:
+
+1. visual  — blindness, low vision, blurry eyesight, eye conditions, trouble seeing near or far, need screen reader
+2. adhd    — attention difficulties, hyperactivity, trouble focusing, impulsivity, distraction, forgetfulness
+3. autism  — sensory overload, social difficulties, need for routine, overstimulation, meltdowns, stimming
+4. learning — dyslexia, trouble reading/writing/spelling, letters jumping or reversing, slow reader
+5. physical — mobility issues, wheelchair, trouble typing, paralysis, AND DEAFNESS, hearing loss, can't hear, deaf, hard of hearing, sign language
+
+User message: "${currentInput.slice(0, 300)}"
+
+Reply with ONLY valid JSON, no markdown fences, no explanation:
+{"profile":"<one of: visual|adhd|autism|learning|physical>","response":"<one empathetic sentence>"}`;
+
+          console.log('[Aurora] Sending to Gemini LLM...');
 
           const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
@@ -142,6 +260,7 @@ Reply JSON only:{"profile":"...","response":"one sentence"}`;
           if (res.ok) {
             const data = await res.json();
             const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            console.log('[Aurora] LLM raw response:', raw);
             if (raw) {
               const cleaned = raw.replace(/```json|```/g, '').trim();
               const parsed = JSON.parse(cleaned);
@@ -150,10 +269,14 @@ Reply JSON only:{"profile":"...","response":"one sentence"}`;
                 return { profile: parsed.profile, response: parsed.response };
               }
             }
+          } else {
+            console.warn('[Aurora] LLM API error:', res.status, await res.text());
           }
         } catch (err) {
           console.warn('[Aurora] LLM classification failed:', err);
         }
+      } else {
+        console.warn('[Aurora] No valid VITE_GEMINI_API_KEY found. LLM is disabled.');
       }
 
       // True default — if even the LLM fails or API is unavailable
@@ -226,12 +349,19 @@ Reply JSON only:{"profile":"...","response":"one sentence"}`;
             <div className="flex items-center gap-4 bg-surface-container-high p-2 rounded-2xl border border-outline-variant/10 shadow-lg relative z-10">
               <input
                 className="flex-grow bg-transparent border-none focus:ring-0 px-4 py-3 text-on-surface placeholder-on-surface-variant/50 outline-none"
-                placeholder="Type your response..."
+                placeholder={isListening ? "Listening..." : "Type your response..."}
                 type="text"
                 value={userInput}
                 onChange={(e) => setUserInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               />
+              <button
+                onClick={toggleListening}
+                className={`p-3 rounded-xl transition-all flex items-center justify-center border-none cursor-pointer ${isListening ? 'bg-error text-on-error animate-pulse' : 'bg-surface-variant text-on-surface hover:bg-surface-variant/80'}`}
+                title={isListening ? "Stop listening" : "Start speaking"}
+              >
+                <span className="material-symbols-outlined">{isListening ? 'mic_off' : 'mic'}</span>
+              </button>
               <button
                 onClick={handleSend}
                 className="intelligence-gradient text-on-primary font-label font-bold px-6 py-3 rounded-xl transition-all hover:scale-105 active:scale-95 flex items-center gap-2 cursor-pointer border-none"

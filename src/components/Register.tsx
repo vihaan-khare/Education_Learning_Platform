@@ -62,7 +62,11 @@ const Register: React.FC = () => {
         disabilityProfile: null
       });
 
-      navigate('/onboarding');
+      if (location.search.includes('audio=true')) {
+        navigate('/onboarding?audio=true');
+      } else {
+        navigate('/onboarding');
+      }
     } catch (err: any) {
       if (err.code === 'auth/email-already-in-use') {
         setError('This email is already registered. Please login instead.');

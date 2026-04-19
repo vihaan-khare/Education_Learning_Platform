@@ -63,7 +63,11 @@ const Login: React.FC = () => {
 
       // Step 4: Regular student — route by disability profile
       const profile = data?.disabilityProfile ?? null;
-      navigate(getRouteForProfile(profile));
+      let route = getRouteForProfile(profile);
+      if (route === '/onboarding' && location.search.includes('audio=true')) {
+        route += '?audio=true';
+      }
+      navigate(route);
     } catch (err: any) {
       const code = err?.code || '';
       if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {

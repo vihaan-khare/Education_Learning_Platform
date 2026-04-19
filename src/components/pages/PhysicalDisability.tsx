@@ -3,7 +3,7 @@
  * Replaces TTS as requested.
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
@@ -16,6 +16,20 @@ import {
   Play,
   Hand
 } from 'lucide-react';
+import LearningLibrary from '../common/LearningLibrary';
+import { askGemini } from '../../utils/geminiChat';
+import type { Message } from '../../utils/geminiChat';
+
+// TTS Helpers
+function speak(text: string, onEnd?: () => void): void {
+  const synth = window.speechSynthesis;
+  synth.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 0.9; u.pitch = 1; u.volume = 1;
+  if (onEnd) u.onend = onEnd;
+  synth.speak(u);
+}
+function stopSpeaking(): void { window.speechSynthesis.cancel(); }
 
 const PhysicalDisability: React.FC = () => {
   const navigate = useNavigate();
@@ -25,6 +39,86 @@ const PhysicalDisability: React.FC = () => {
   const [showCaptions, setShowCaptions] = useState(true);
   const [currentCaption, setCurrentCaption] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // ── Voice Assistant State ──
+  const [isVoiceMode, setIsVoiceMode] = useState(false);
+  const [voiceMessages, setVoiceMessages] = useState<Message[]>([]);
+  const [listening, setListening] = useState(false);
+  const [thinking, setThinking] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const recognitionRef = useRef<any>(null);
+  const chatBottomRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef(voiceMessages);
+  useEffect(() => { messagesRef.current = voiceMessages; }, [voiceMessages]);
+  useEffect(() => { if (isVoiceMode) chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [voiceMessages, isVoiceMode]);
+
+  const startListening = useCallback(() => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) return;
+    stopSpeaking();
+    const rec = new SR();
+    rec.continuous = false; rec.interimResults = true; rec.lang = 'en-US';
+    rec.onstart = () => setListening(true);
+    rec.onend = () => setListening(false);
+    rec.onresult = (event: any) => {
+      const result = Array.from(event.results as SpeechRecognitionResultList).map((r: any) => r[0].transcript).join('');
+      setTranscript(result);
+      if (event.results[event.results.length - 1].isFinal) {
+        handleVoiceMessage(result.trim());
+        setTranscript('');
+      }
+    };
+    rec.onerror = () => setListening(false);
+    recognitionRef.current = rec;
+    try { rec.start(); } catch (e) {}
+  }, []);
+
+  const stopListening = useCallback(() => {
+    recognitionRef.current?.stop();
+    setListening(false);
+  }, []);
+
+  const handleVoiceMessage = async (text: string) => {
+    if (!text) return;
+    const lower = text.toLowerCase();
+    const userMsg: Message = { sender: 'user', text };
+    setVoiceMessages(prev => [...prev, userMsg]);
+
+    if (lower.match(/^(stop|silence|pause|quiet|shut up|hush)$/)) { stopSpeaking(); return; }
+
+    setThinking(true);
+    const reply = await askGemini(text, [...messagesRef.current, userMsg]);
+    setThinking(false);
+    setVoiceMessages(prev => [...prev, { sender: 'ai', text: reply }]);
+    speak(reply);
+  };
+
+  const renderVoicePanel = () => {
+    if (!isVoiceMode) return null;
+    return (
+      <aside style={{ width: '340px', backgroundColor: '#f8fafc', borderRadius: '1rem', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0, height: 'calc(100vh - 150px)', position: 'sticky', top: '6rem' }}>
+        <div style={{ padding: '1rem', borderBottom: '1px solid #e2e8f0', backgroundColor: '#fff' }}>
+          <h2 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 800 }}>🎙️ Voice Assistant</h2>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {voiceMessages.map((m, i) => (
+            <div key={i} style={{ padding: '0.75rem', borderRadius: '0.75rem', maxWidth: '90%', fontSize: '0.95rem', lineHeight: 1.5, ...(m.sender === 'user' ? { backgroundColor: '#3b82f6', color: '#fff', alignSelf: 'flex-end' } : { backgroundColor: '#fff', border: '1px solid #e2e8f0', alignSelf: 'flex-start' }) }}>
+              {m.text}
+            </div>
+          ))}
+          {thinking && <div style={{ padding: '0.75rem', borderRadius: '0.75rem', maxWidth: '90%', backgroundColor: '#fff', border: '1px solid #e2e8f0', alignSelf: 'flex-start' }}>Thinking...</div>}
+          {transcript && <div style={{ padding: '0.75rem', borderRadius: '0.75rem', maxWidth: '90%', backgroundColor: '#3b82f6', color: '#fff', alignSelf: 'flex-end', opacity: 0.6 }}>{transcript}</div>}
+          <div ref={chatBottomRef} />
+        </div>
+        <div style={{ padding: '1rem', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '0.5rem', backgroundColor: '#fff' }}>
+          <button style={{ flex: 1, padding: '0.75rem', borderRadius: '0.5rem', border: 'none', color: '#fff', fontWeight: 700, cursor: 'pointer', ...(listening ? { backgroundColor: '#ef4444' } : { backgroundColor: '#3b82f6' }) }} onClick={listening ? stopListening : startListening}>
+            {listening ? '⏹ Stop' : '🎤 Speak'}
+          </button>
+          <button style={{ padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0', backgroundColor: 'transparent', cursor: 'pointer', fontWeight: 600 }} onClick={stopSpeaking}>🔇 Silence</button>
+        </div>
+      </aside>
+    );
+  };
 
   // Mock Captions Data (would be generated by AI in a real app)
   const mockCaptions = [
@@ -79,6 +173,12 @@ const PhysicalDisability: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-4">
+          <button
+            onClick={() => setIsVoiceMode(!isVoiceMode)}
+            style={{ padding: '0.5rem 1rem', borderRadius: '0.75rem', border: 'none', fontWeight: 700, cursor: 'pointer', backgroundColor: isVoiceMode ? '#3b82f6' : '#edf2f7', color: isVoiceMode ? '#fff' : '#000', transition: 'all 0.2s' }}
+          >
+            🎙️ Voice Assistant
+          </button>
           <label className="flex items-center gap-2 cursor-pointer bg-primary text-on-primary px-4 py-2 rounded-xl font-bold hover:opacity-90 transition-opacity">
             <Upload className="w-4 h-4" />
             <span>Upload Lesson</span>
@@ -87,7 +187,8 @@ const PhysicalDisability: React.FC = () => {
         </div>
       </header>
 
-      <main className="p-8 max-w-6xl mx-auto">
+      <div style={{ display: 'flex', gap: '2rem', maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
+      <main style={{ flex: 1 }}>
         {/* Navigation to SignConnect Module (Always Visible) */}
         <div className="mb-8 flex justify-end animate-in fade-in slide-in-from-right-4 duration-500">
           <button 
@@ -216,6 +317,43 @@ const PhysicalDisability: React.FC = () => {
         )}
 
       </main>
+      {renderVoicePanel()}
+      </div>
+
+      {/* Admin Resources & Knowledge Base Section */}
+      <section className="bg-surface-container-low py-20 border-t border-outline-variant">
+        <div className="max-w-6xl mx-auto px-8">
+          <div className="mb-12">
+            <h2 className="text-4xl font-headline font-bold mb-4">Resource Library</h2>
+            <p className="text-on-surface-variant text-lg">Additional courses and assignments tailored for physical accessibility.</p>
+          </div>
+          
+          <LearningLibrary
+            profile="physical"
+            title=""
+            subtitle=""
+            coreCourses={[
+              {
+                id: 'core-adaptive-tech',
+                title: 'Adaptive Tech 101',
+                description: 'A guide to alternative input devices and how to customize your digital environment.',
+                icon: '🦾',
+                sections: [
+                  {
+                    id: 'adaptive-1',
+                    title: 'Alternative Mouse & Keyboards',
+                    type: 'article',
+                    content: 'Learn about eye-tracking, sip-and-puff systems, and specialized keyboards that make computing accessible for everyone.'
+                  }
+                ]
+              }
+            ]}
+            onBack={() => {}}
+            isEmbedded={true}
+            accentColor="#f87171"
+          />
+        </div>
+      </section>
 
       <style>{`
         .glass-panel {

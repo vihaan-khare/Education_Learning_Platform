@@ -22,11 +22,8 @@ import { auth } from '../../firebase';
 import { useAdminCourses } from '../../hooks/useAdminCourses';
 import type { AdminCourse } from '../../hooks/useAdminCourses';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-interface Message {
-  sender: 'ai' | 'user';
-  text: string;
-}
+import { askGemini } from '../../utils/geminiChat';
+import type { Message } from '../../utils/geminiChat';
 
 // ─── TTS Helper ───────────────────────────────────────────────────────────────
 function speak(text: string, onEnd?: () => void): void {
@@ -44,14 +41,7 @@ function stopSpeaking(): void {
   window.speechSynthesis.cancel();
 }
 
-// ─── Gemini chat ──────────────────────────────────────────────────────────────
-async function askGemini(userText: string, history: Message[]): Promise<string> {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!apiKey || apiKey === 'your-gemini-api-key') {
-    return "I'm your visual impairment learning assistant. My AI responses are unavailable right now, but I'm here to help you navigate this platform using your voice.";
-  }
-
-  const systemPrompt = `You are a compassionate, voice-first AI learning assistant for users with visual impairment. 
+const VISUAL_SYSTEM_PROMPT = `You are a compassionate, voice-first AI learning assistant for users with visual impairment. 
 Rules:
 - Keep responses SHORT (2-3 sentences max) because they will be read aloud.
 - Never use bullet points, markdown, or special characters — plain spoken language only.
@@ -59,64 +49,6 @@ Rules:
 - You help users navigate the learning platform, answer questions about their modules, and provide support.
 - Available modules on this platform: Audio Stories, Braille Introduction, Screen Reader Training, High Contrast Learning, Voice Navigation.
 - All are currently in development. Acknowledge this honestly but positively.`;
-
-  // Squash contiguous messages of the same role (Gemini API requires strict alternating roles)
-  const squashedHistory: { role: string, parts: { text: string }[] }[] = [];
-  for (const m of history.slice(-6)) {
-    const role = m.sender === 'ai' ? 'model' : 'user';
-    if (squashedHistory.length > 0 && squashedHistory[squashedHistory.length - 1].role === role) {
-      squashedHistory[squashedHistory.length - 1].parts[0].text += '\n' + m.text;
-    } else {
-      squashedHistory.push({ role, parts: [{ text: m.text }] });
-    }
-  }
-
-  const models = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-flash-latest'];
-  let lastErrorData = null;
-  let lastStatus = null;
-  let hitRateLimit = false;
-
-  for (const model of models) {
-    try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            system_instruction: { parts: [{ text: systemPrompt }] },
-            contents: squashedHistory,
-          }),
-        }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-        return text.replace(/[*_`#\-]/g, '').trim();
-      } else {
-        lastStatus = res.status;
-        lastErrorData = await res.json().catch(() => null);
-        console.warn(`[VisualImpairment] Model ${model} failed with ${res.status}. Trying next...`);
-        
-        if (res.status === 429) hitRateLimit = true;
-
-        // If it's a 400 Bad Request, our JSON payload is genuinely malformed, so stop retrying.
-        // Ignore 404s (model not found) as just missing fallback options.
-        if (res.status === 400) {
-          break;
-        }
-      }
-    } catch (err) {
-      console.error(`[VisualImpairment] Exception with model ${model}:`, err);
-    }
-  }
-
-  console.error('[VisualImpairment] All models exhausted. Last error:', lastStatus, lastErrorData);
-  if (hitRateLimit) {
-    return "I am currently receiving too many requests. Google's API limit has been reached. Please try again in 30 seconds.";
-  }
-  return `I encountered a configuration issue with the AI system (Error ${lastStatus}). Please contact the admin.`;
-}
 
 interface CourseSectionType {
   id: string;
@@ -444,7 +376,7 @@ const VisualImpairment: React.FC = () => {
     // 2. If it wasn't a local command, pass to Gemini AI for General Chat
     setThinking(true);
     const { messages: currentMessages } = stateRef.current;
-    const reply = await askGemini(text, [...currentMessages, userMsg]);
+    const reply = await askGemini(text, [...currentMessages, userMsg], VISUAL_SYSTEM_PROMPT);
     setThinking(false);
     setMessages(prev2 => [...prev2, { sender: 'ai', text: reply }]);
     speak(reply);
@@ -472,6 +404,9 @@ const VisualImpairment: React.FC = () => {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button style={S.homeBtn} onClick={() => { stopSpeaking(); navigate('/home'); }} aria-label="Go to home">
+            Home
+          </button>
           <button style={S.signOutBtn} onClick={handleLogout} aria-label="Sign out">
             Sign Out
           </button>
@@ -619,6 +554,16 @@ const S: Record<string, React.CSSProperties> = {
     backgroundColor: 'transparent',
     color: '#f87171',
     border: '2px solid #f87171',
+    borderRadius: '0.5rem',
+    fontWeight: 700,
+    fontSize: '1rem',
+    cursor: 'pointer',
+  },
+  homeBtn: {
+    padding: '0.6rem 1.25rem',
+    backgroundColor: '#3b82f6',
+    color: '#ffffff',
+    border: 'none',
     borderRadius: '0.5rem',
     fontWeight: 700,
     fontSize: '1rem',
